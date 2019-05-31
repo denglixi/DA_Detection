@@ -24,8 +24,8 @@ def parse_rec(filename):
     for obj in tree.findall('object'):
         obj_struct = {}
         obj_struct['name'] = obj.find('name').text
-        obj_struct['pose'] = obj.find('pose').text
-        obj_struct['truncated'] = int(obj.find('truncated').text)
+        #obj_struct['pose'] = obj.find('pose').text
+        #obj_struct['truncated'] = int(obj.find('truncated').text)
         obj_struct['difficult'] = int(obj.find('difficult').text)
         bbox = obj.find('bndbox')
         obj_struct['bbox'] = [int(bbox.find('xmin').text),
@@ -102,7 +102,9 @@ def cal_overlap(boxes_array, box):
 def get_gt_recs(cachedir, imagesetfile, annopath):
     if not os.path.isdir(cachedir):
         os.mkdir(cachedir)
-    cachefile = os.path.join(cachedir, '%s_annots.pkl' % imagesetfile)
+
+    cachefile = os.path.join(cachedir, '%s_annots.pkl' %
+                             imagesetfile.split('/')[-1])
     # read list of images
     with open(imagesetfile, 'r') as f:
         lines = f.readlines()
@@ -355,14 +357,13 @@ def rec_pre_eval_for_image_topk(all_boxes,
 
                 #boxes_of_cls =  boxes_of_cls[np.argmax(boxes_of_cls[:, 4])]
                 if bboxes is None:
-                    #i bboxes = np.r_[boxes_of_cls, cls_cloumn + np.zeros(1)]
-                    bboxes = np.c_[boxes_of_cls, cls_cloumn ]
+                    # i bboxes = np.r_[boxes_of_cls, cls_cloumn + np.zeros(1)]
+                    bboxes = np.c_[boxes_of_cls, cls_cloumn]
                 else:
-                    #bboxes = np.vstack(
+                    # bboxes = np.vstack(
                     #    (bboxes, np.r_[boxes_of_cls, cls_cloumn + np.zeros(1) ]))
                     bboxes = np.vstack(
-                        (bboxes, np.c_[boxes_of_cls, cls_cloumn ]))
-
+                        (bboxes, np.c_[boxes_of_cls, cls_cloumn]))
 
         if bboxes is None:
             recall = 0
@@ -382,19 +383,18 @@ def rec_pre_eval_for_image_topk(all_boxes,
                     FP += 1
                 #R = [obj for obj in recs[imagename] if obj['name'] == cls_name]
                 #bbox = np.array([x['bbox'] for x in R])
-                #if len(bbox) > 0:
+                # if len(bbox) > 0:
                 #    omax, jmax = cal_overlap(bbox, det_box)
                 #    if omax > ovthresh:
                 #        TP += 1
                 #    else:
                 #        FP += 1
-                #else:
+                # else:
                 #    FP += 1
 
             recall = TP / np.float32(len(img_categories))
             if recall > 1:
                 recall = 1
-
 
             if TP + FP == 0:
                 accuracy = 0

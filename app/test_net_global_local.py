@@ -46,8 +46,8 @@ if __name__ == '__main__':
 
     print('Called with args:')
     print(args)
-    # args = set_dataset_args(args, test=True)
-    args.imdbval_name = 'food_Arts_innermt10test_exclArts_train_mt10'
+    args = set_dataset_args(args, test=True)
+    #args.imdbval_name = 'food_Arts_innermt10test_exclArts_train_mt10'
     args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]',
                      'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
     args.cfg_file = "cfgs/{}_ls.yml".format(
@@ -142,7 +142,7 @@ if __name__ == '__main__':
     dataset = roibatchLoader(roidb, ratio_list, ratio_index, 1,
                              imdb.num_classes, training=False, normalize=False, path_return=True)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1,
-                                             shuffle=False, num_workers=0,
+                                             shuffle=False, num_workers=args.num_workers,
                                              pin_memory=True)
 
     data_iter = iter(dataloader)
@@ -189,7 +189,8 @@ if __name__ == '__main__':
                     else:
                         box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
                             + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
-                        box_deltas = box_deltas.view(1, -1, 4 * len(imdb.classes))
+                        box_deltas = box_deltas.view(
+                            1, -1, 4 * len(imdb.classes))
 
                 pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
                 pred_boxes = clip_boxes(pred_boxes, im_info.data, 1)
@@ -216,7 +217,8 @@ if __name__ == '__main__':
                     else:
                         cls_boxes = pred_boxes[inds][:, j * 4:(j + 1) * 4]
 
-                    cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
+                    cls_dets = torch.cat(
+                        (cls_boxes, cls_scores.unsqueeze(1)), 1)
                     # cls_dets = torch.cat((cls_boxes, cls_scores), 1)
                     cls_dets = cls_dets[order]
                     keep = nms(cls_dets, cfg.TEST.NMS)
@@ -233,7 +235,8 @@ if __name__ == '__main__':
                 if len(image_scores) > max_per_image:
                     image_thresh = np.sort(image_scores)[-max_per_image]
                     for j in xrange(1, imdb.num_classes):
-                        keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
+                        keep = np.where(
+                            all_boxes[j][i][:, -1] >= image_thresh)[0]
                         all_boxes[j][i] = all_boxes[j][i][keep, :]
 
             misc_toc = time.time()
@@ -251,7 +254,7 @@ if __name__ == '__main__':
 
     print('Evaluating detections')
     # evaluate mAP
-    cls_ap_zip, dataset_mAP= imdb.evaluate_detections(
+    cls_ap_zip, dataset_mAP = imdb.evaluate_detections(
         all_boxes, output_dir)
     cls_ap = list(cls_ap_zip)
     val_categories = get_categories("Arts"+"_"+"inner")
@@ -267,4 +270,3 @@ if __name__ == '__main__':
 
     map_exist_cls = sum(map_exist_cls) / len(map_exist_cls)
     print(map_exist_cls)
-

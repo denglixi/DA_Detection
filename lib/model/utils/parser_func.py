@@ -117,8 +117,6 @@ def parse_args():
 def set_dataset_args(args, test=False):
     if not test:
         data2imdb_dict = get_data2imdb_dict()
-        import pdb
-        pdb.set_trace()
         if args.dataset in data2imdb_dict:
             args.imdb_name = data2imdb_dict[args.dataset]
         elif args.dataset == "pascal_voc":
@@ -216,9 +214,13 @@ def set_dataset_args(args, test=False):
             args.imdbval_name_target = "foggy_cityscape_trainval"
             args.set_cfgs_target = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES',
                                     '30']
-    else:
 
-        if args.dataset == "pascal_voc":
+    # for test
+    else:
+        data2imdb_val_dict = get_data2imdbval_dict(imgset="test")
+        if args.dataset in data2imdb_val_dict:
+            args.imdbval_name = data2imdb_val_dict[args.dataset]
+        elif args.dataset == "pascal_voc":
             args.imdb_name = "voc_2007_trainval"
             args.imdbval_name = "voc_2007_test"
             args.set_cfgs = ['ANCHOR_SCALES',
@@ -270,9 +272,9 @@ def set_dataset_args(args, test=False):
 
 
 def get_data2imdbval_dict(imgset, category_imgset='train'):
-    # create canttens
 
-    assert imgset in ['val', 'test', 'train']
+    #dataset : canteen
+    #imdb : canteen_imgset_categories
 
     # set canteens
     collected_cts = ["Arts", "Science", "YIH",
@@ -292,8 +294,8 @@ def get_data2imdbval_dict(imgset, category_imgset='train'):
 
     for ct in all_canteens:
         dataset = "food{}".format(ct)
-        imdbval_name = "food_{}_{}_{}_train".format(
-            ct, imgset, ct)
+        imdbval_name = "food_{}_{}_{}_train_mt10".format(
+            ct, imgset, "excl"+ct)
         data2imdbval_dict[dataset] = imdbval_name
 
     for ct in all_canteens:
@@ -309,54 +311,57 @@ def get_data2imdbval_dict(imgset, category_imgset='train'):
                 ct, ct_sp, ct, mtN)
             data2imdbval_dict[dataset] = imdbval_name
 
+    return data2imdbval_dict
+
     # 2. create excl_dataset -> dataset
     # cross domain setting
 
-    for ct in collected_cts:
-        for mtN in [0, 10]:
-            for fewN in [0, 1, 5]:
-                if mtN == 0:
-                    mtN_str = ""
-                else:
-                    mtN_str = "mt{}".format(mtN)
+    # for ct in collected_cts:
+    #    for mtN in [0, 10]:
+    #        for fewN in [0, 1, 5]:
+    #            if mtN == 0:
+    #                mtN_str = ""
+    #            else:
+    #                mtN_str = "mt{}".format(mtN)
 
-                if fewN == 0:
-                    fewN_str = ""
-                else:
-                    fewN_str = "few{}".format(fewN)
+    #            if fewN == 0:
+    #                fewN_str = ""
+    #            else:
+    #                fewN_str = "few{}".format(fewN)
 
-                # datasets here only support mtN format
-                # for example:  dataset    -> foodexclArts[mt10]_testArts[few1]
-                #               imdb_train -> food_excl
-                #               imdb_val   -> food_Arts_inner{}{}val
+    #            # datasets here only support mtN format
+    #            # for example:  dataset    -> foodexclArts[mt10]_testArts[few1]
+    #            #               imdb_train -> food_excl
+    #            #               imdb_val   -> food_Arts_inner{}{}val
 
-                dataset = "foodexcl{}{}_test{}{}".format(
-                    ct, mtN_str, ct,  fewN_str)
+    #            dataset = "foodexcl{}{}_test{}{}".format(
+    #                ct, mtN_str, ct,  fewN_str)
 
-                if fewN == 0:
-                    imdbval_name = "food_{}_inner{}{}_excl{}_train_mt{}".format(
-                        ct, mtN_str, imgset, ct, mtN)  # innermt10val or innermt10test
-                else:
-                    imdbval_name = "food_{}_inner{}{}val_excl{}_train_mt{}".format(
-                        ct, fewN_str, mtN_str, ct, mtN)  # it not working anymore . it is like innerfew1mt10val: TODO spliting to val and test
+    #            if fewN == 0:
+    #                imdbval_name = "food_{}_inner{}{}_excl{}_train_mt{}".format(
+    #                    ct, mtN_str, imgset, ct, mtN)  # innermt10val or innermt10test
+    #            else:
+    #                imdbval_name = "food_{}_inner{}{}val_excl{}_train_mt{}".format(
+    #                    ct, fewN_str, mtN_str, ct, mtN)  # it not working anymore . it is like innerfew1mt10val: TODO spliting to val and test
 
-                data2imdbval_dict[dataset] = imdbval_name
+    #            data2imdbval_dict[dataset] = imdbval_name
 
     # 3. create exclcanteen_finecanteenfewN -> canteenfewN
 
-    for ct in collected_cts:
-        for mtN in [10]:
-            for fewN in [1, 5, 10]:
-                dataset = "foodexcl{}mt{}_fine{}few{}_test{}few{}".format(
-                    ct, mtN, ct, fewN, ct, fewN)
-                imdbval_name = "food_{}_innerfew{}mt{}val_excl{}_train_mt{}".format(
-                    ct, fewN, mtN, ct, mtN)
-                data2imdbval_dict[dataset] = imdbval_name
+    # for ct in collected_cts:
+    #    for mtN in [10]:
+    #        for fewN in [1, 5, 10]:
+    #            dataset = "foodexcl{}mt{}_fine{}few{}_test{}few{}".format(
+    #                ct, mtN, ct, fewN, ct, fewN)
+    #            imdbval_name = "food_{}_innerfew{}mt{}val_excl{}_train_mt{}".format(
+    #                ct, fewN, mtN, ct, mtN)
+    #            data2imdbval_dict[dataset] = imdbval_name
 
     # 4. extra
 
-    data2imdbval_dict['schoollunch'] = 'schoollunch_{}'.format(args.imgset)
-    return data2imdbval_dict
+    #data2imdbval_dict['schoollunch'] = 'schoollunch_{}'.format(args.imgset)
+    # return data2imdbval_dict
+
 
 def get_data2imdb_inner_dict(split='innermt10val', category_split='train'):
     # create canttens
@@ -378,13 +383,15 @@ def get_data2imdb_inner_dict(split='innermt10val', category_split='train'):
             ct_sp = "{}{}".format(split, mtNstr)
 
             if mtN == 0:
-                imdb_name = "food_{}_{}_{}_{}".format(ct, ct_sp, ct, category_split)
+                imdb_name = "food_{}_{}_{}_{}".format(
+                    ct, ct_sp, ct, category_split)
             else:
                 imdb_name = "food_{}_{}_{}_{}_mt{}".format(
                     ct, ct_sp, ct, split, mtN)
             dataset = "food{}{}".format(ct, mtNstr)
             data2imdb_dict[dataset] = imdb_name
     return data2imdb_dict
+
 
 def get_data2imdb_dict(split='train', category_split='train'):
     # create canttens
@@ -434,6 +441,7 @@ def get_data2imdb_dict(split='train', category_split='train'):
 
     # 5.voc
     data2imdb_dict[''] = 'voc'
+
 
 def set_food_imdb_name(args):
     data2imdb_dict = get_data2imdb_dict()
