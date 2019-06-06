@@ -24,8 +24,8 @@ __D.CLIPART = "/clipart"
 __D.WATER = "/watercolor"
 __D.SIM10K = "Sim10k"
 __D.CITYSCAPE_CAR = "/VOC2007"
-__D.CITYSCAPE = "VOC2007"
-__D.FOGGYCITY = "VOC2007"
+__D.CITYSCAPE = "data/city"
+__D.FOGGYCITY = "data/foggycity"
 
 
 def _merge_a_into_b(a, b):

@@ -40,8 +40,8 @@ if __name__ == '__main__':
 
     print('Called with args:')
     print(args)
-    # args = set_dataset_args(args)
-    args = set_food_imdb_name(args)
+    args = set_dataset_args(args)
+    #args = set_food_imdb_name(args)
     args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]',
                      'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
     args.set_cfgs_target = ['ANCHOR_SCALES', '[8, 16, 32]',

@@ -117,6 +117,8 @@ def parse_args():
 def set_dataset_args(args, test=False):
     if not test:
         data2imdb_dict = get_data2imdb_dict()
+        import pdb
+        pdb.set_trace()
         if args.dataset in data2imdb_dict:
             args.imdb_name = data2imdb_dict[args.dataset]
         elif args.dataset == "pascal_voc":
@@ -267,7 +269,7 @@ def set_dataset_args(args, test=False):
     return args
 
 
-def get_data2imdbval_dict(imgset, category_imgset='trian'):
+def get_data2imdbval_dict(imgset, category_imgset='train'):
     # create canttens
 
     assert imgset in ['val', 'test', 'train']
