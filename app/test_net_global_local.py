@@ -47,7 +47,10 @@ if __name__ == '__main__':
     print('Called with args:')
     print(args)
     # args = set_dataset_args(args, test=True)
-    args.imdbval_name = 'food_Arts_innermt10test_exclArts_train_mt10'
+    #args.imdbval_name = 'food_Arts_innermt10test_exclArts_train_mt10'
+    #args.imdbval_name = 'food_YIH_innermt10test_exclYIH_train_mt10'
+    test_canteen = 'TechMixedVeg'
+    args.imdbval_name = 'food_{}_innermt10test_excl{}_train_mt10'.format(test_canteen, test_canteen)
     args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]',
                      'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
     args.cfg_file = "cfgs/{}_ls.yml".format(
@@ -254,7 +257,7 @@ if __name__ == '__main__':
     cls_ap_zip, dataset_mAP= imdb.evaluate_detections(
         all_boxes, output_dir)
     cls_ap = list(cls_ap_zip)
-    val_categories = get_categories("Arts"+"_"+"inner")
+    val_categories = get_categories("{}".format(test_canteen)+"_"+"inner")
 
     map_exist_cls = []
     for cls, ap in cls_ap:
