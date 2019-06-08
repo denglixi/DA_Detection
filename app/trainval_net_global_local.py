@@ -214,11 +214,7 @@ if __name__ == '__main__':
             except:
                 data_iter_s = iter(dataloader_s)
                 data_s = next(data_iter_s)
-            try:
-                data_t = next(data_iter_t)
-            except:
-                data_iter_t = iter(dataloader_t)
-                data_t = next(data_iter_t)
+
             # eta = 1.0
             count_iter += 1
             # put source data into variable
@@ -237,30 +233,40 @@ if __name__ == '__main__':
                 + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
             loss_temp += loss.item()
 
-            # domain label
-            domain_s = Variable(torch.zeros(out_d.size(0)).long().cuda())
-            # global alignment loss
-            dloss_s = 0.5 * FL(out_d, domain_s)
-            # local alignment loss
-            dloss_s_p = 0.5 * torch.mean(out_d_pixel ** 2)
+            if arg.train_domain_loss:
 
-            # put target data into variable
-            im_data.data.resize_(data_t[0].size()).copy_(data_t[0])
-            im_info.data.resize_(data_t[1].size()).copy_(data_t[1])
-            # gt is empty
-            gt_boxes.data.resize_(1, 1, 5).zero_()
-            num_boxes.data.resize_(1).zero_()
-            out_d_pixel, out_d = fasterRCNN(
-                im_data, im_info, gt_boxes, num_boxes, target=True)
-            # domain label
-            domain_t = Variable(torch.ones(out_d.size(0)).long().cuda())
-            dloss_t = 0.5 * FL(out_d, domain_t)
-            # local alignment loss
-            dloss_t_p = 0.5 * torch.mean((1 - out_d_pixel) ** 2)
-            if args.dataset == 'sim10k':
-                loss += (dloss_s + dloss_t + dloss_s_p + dloss_t_p) * args.eta
-            else:
-                loss += (dloss_s + dloss_t + dloss_s_p + dloss_t_p) * 10
+                # domain label
+                domain_s = Variable(torch.zeros(out_d.size(0)).long().cuda())
+                # global alignment loss
+                dloss_s = 0.5 * FL(out_d, domain_s)
+                # local alignment loss
+                dloss_s_p = 0.5 * torch.mean(out_d_pixel ** 2)
+
+                try:
+                    data_t = next(data_iter_t)
+                except:
+                    data_iter_t = iter(dataloader_t)
+                    data_t = next(data_iter_t)
+
+                # put target data into variable
+                im_data.data.resize_(data_t[0].size()).copy_(data_t[0])
+                im_info.data.resize_(data_t[1].size()).copy_(data_t[1])
+                # gt is empty
+                gt_boxes.data.resize_(1, 1, 5).zero_()
+                num_boxes.data.resize_(1).zero_()
+                out_d_pixel, out_d = fasterRCNN(
+                    im_data, im_info, gt_boxes, num_boxes, target=True)
+                # domain label
+                domain_t = Variable(torch.ones(out_d.size(0)).long().cuda())
+                dloss_t = 0.5 * FL(out_d, domain_t)
+                # local alignment loss
+                dloss_t_p = 0.5 * torch.mean((1 - out_d_pixel) ** 2)
+
+                if args.dataset == 'sim10k':
+                    loss += (dloss_s + dloss_t + dloss_s_p + dloss_t_p) * args.eta
+                else:
+                    loss += (dloss_s + dloss_t + dloss_s_p + dloss_t_p) * 10
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
