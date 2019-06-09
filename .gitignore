@@ -2,7 +2,7 @@ data/*
 output/
 path/
 models/
-
+data/
 
 # READ THIS BEFORE YOU REFACTOR ME
 #

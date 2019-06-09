@@ -80,6 +80,9 @@ def parse_args():
     parser.add_argument('--eta', dest='eta',
                         help='trade-off parameter between detection loss and domain-alignment loss. Used for Car datasets',
                         default=0.1, type=float)
+    parser.add_argument('--train_domain_loss', dest='train_domain_loss',
+                        help='whether add the domain loss for training'
+                        action='store_true')
     parser.add_argument('--lr_decay_step', dest='lr_decay_step',
                         help='step to do learning rate decay, unit is epoch',
                         default=5, type=int)
@@ -384,6 +387,8 @@ def get_data2imdb_inner_dict(split='innermt10val', category_split='train'):
                     ct, ct_sp, ct, split, mtN)
             dataset = "food{}{}".format(ct, mtNstr)
             data2imdb_dict[dataset] = imdb_name
+
+
     return data2imdb_dict
 
 def get_data2imdb_dict(split='train', category_split='train'):
@@ -427,6 +432,13 @@ def get_data2imdb_dict(split='train', category_split='train'):
         dataset = "food_meta_{}_train".format(ct)
         imdb_name = dataset
         data2imdb_dict[dataset] = imdb_name
+
+    for ct in collected_cts:
+        for mtN in [10]:
+            for fewN in [1, 5]:
+                dataset = 'food{}mt{}_few{}'.format(ct,mtN,fewN)
+                imdb_name = 'food_{}_innermt{}valfew{}mt{}train_excl{}_{}_mt{}'.format(ct, mtN, fewN, mtN,ct, split, mtN )
+                data2imdb_dict[dataset] = imdb_name
 
     # 4. extra
     data2imdb_dict['schoollunch'] = 'schoollunch_train'
