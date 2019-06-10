@@ -84,7 +84,7 @@ def parse_args():
                         help='trade-off parameter between detection loss and domain-alignment loss. Used for Car datasets',
                         default=0.1, type=float)
     parser.add_argument('--train_domain_loss', dest='train_domain_loss',
-                        help='whether add the domain loss for training'，
+                        help='whether add the domain loss for training',
                         action='store_true')
     parser.add_argument('--lr_decay_step', dest='lr_decay_step',
                         help='step to do learning rate decay, unit is epoch',
