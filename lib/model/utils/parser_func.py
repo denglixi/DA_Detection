@@ -1,3 +1,6 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+# vim:fenc=utf-8
 import argparse
 from model.utils.config import cfg, cfg_from_file, cfg_from_list
 
