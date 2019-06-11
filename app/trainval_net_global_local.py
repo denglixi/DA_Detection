@@ -214,11 +214,7 @@ if __name__ == '__main__':
             except:
                 data_iter_s = iter(dataloader_s)
                 data_s = next(data_iter_s)
-            try:
-                data_t = next(data_iter_t)
-            except:
-                data_iter_t = iter(dataloader_t)
-                data_t = next(data_iter_t)
+
             # eta = 1.0
             count_iter += 1
             # put source data into variable
@@ -237,30 +233,41 @@ if __name__ == '__main__':
                 + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
             loss_temp += loss.item()
 
-            # domain label
-            domain_s = Variable(torch.zeros(out_d.size(0)).long().cuda())
-            # global alignment loss
-            dloss_s = 0.5 * FL(out_d, domain_s)
-            # local alignment loss
-            dloss_s_p = 0.5 * torch.mean(out_d_pixel ** 2)
+            if args.train_domain_loss:
 
-            # put target data into variable
-            im_data.data.resize_(data_t[0].size()).copy_(data_t[0])
-            im_info.data.resize_(data_t[1].size()).copy_(data_t[1])
-            # gt is empty
-            gt_boxes.data.resize_(1, 1, 5).zero_()
-            num_boxes.data.resize_(1).zero_()
-            out_d_pixel, out_d = fasterRCNN(
-                im_data, im_info, gt_boxes, num_boxes, target=True)
-            # domain label
-            domain_t = Variable(torch.ones(out_d.size(0)).long().cuda())
-            dloss_t = 0.5 * FL(out_d, domain_t)
-            # local alignment loss
-            dloss_t_p = 0.5 * torch.mean((1 - out_d_pixel) ** 2)
-            if args.dataset == 'sim10k':
-                loss += (dloss_s + dloss_t + dloss_s_p + dloss_t_p) * args.eta
-            else:
-                loss += (dloss_s + dloss_t + dloss_s_p + dloss_t_p) * 10
+                # domain label
+                domain_s = Variable(torch.zeros(out_d.size(0)).long().cuda())
+                # global alignment loss
+                dloss_s = 0.5 * FL(out_d, domain_s)
+                # local alignment loss
+                dloss_s_p = 0.5 * torch.mean(out_d_pixel ** 2)
+
+                try:
+                    data_t = next(data_iter_t)
+                except:
+                    data_iter_t = iter(dataloader_t)
+                    data_t = next(data_iter_t)
+
+                # put target data into variable
+                im_data.data.resize_(data_t[0].size()).copy_(data_t[0])
+                im_info.data.resize_(data_t[1].size()).copy_(data_t[1])
+                # gt is empty
+                gt_boxes.data.resize_(1, 1, 5).zero_()
+                num_boxes.data.resize_(1).zero_()
+                out_d_pixel, out_d = fasterRCNN(
+                    im_data, im_info, gt_boxes, num_boxes, target=True)
+                # domain label
+                domain_t = Variable(torch.ones(out_d.size(0)).long().cuda())
+                dloss_t = 0.5 * FL(out_d, domain_t)
+                # local alignment loss
+                dloss_t_p = 0.5 * torch.mean((1 - out_d_pixel) ** 2)
+
+                if args.dataset == 'sim10k':
+                    loss += (dloss_s + dloss_t +
+                             dloss_s_p + dloss_t_p) * args.eta
+                else:
+                    loss += (dloss_s + dloss_t + dloss_s_p + dloss_t_p) * 10
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -282,10 +289,11 @@ if __name__ == '__main__':
                     loss_rpn_box = rpn_loss_box.item()
                     loss_rcnn_cls = RCNN_loss_cls.item()
                     loss_rcnn_box = RCNN_loss_bbox.item()
-                    dloss_s = dloss_s.item()
-                    dloss_t = dloss_t.item()
-                    dloss_s_p = dloss_s_p.item()
-                    dloss_t_p = dloss_t_p.item()
+                    if args.train_domain_loss:
+                        dloss_s = dloss_s.item()
+                        dloss_t = dloss_t.item()
+                        dloss_s_p = dloss_s_p.item()
+                        dloss_t_p = dloss_t_p.item()
                     fg_cnt = torch.sum(rois_label.data.ne(0))
                     bg_cnt = rois_label.data.numel() - fg_cnt
 
@@ -293,10 +301,16 @@ if __name__ == '__main__':
                       % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
                 print("\t\t\tfg/bg=(%d/%d), time cost: %f" %
                       (fg_cnt, bg_cnt, end - start))
-                print(
-                    "\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f dloss s: %.4f dloss t: %.4f dloss s pixel: %.4f dloss t pixel: %.4f eta: %.4f"
-                    % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, dloss_s, dloss_t, dloss_s_p, dloss_t_p,
-                       args.eta))
+
+                if args.train_domain_loss:
+                    print(
+                        "\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f dloss s: %.4f dloss t: %.4f dloss s pixel: %.4f dloss t pixel: %.4f eta: %.4f"
+                        % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, dloss_s, dloss_t, dloss_s_p, dloss_t_p,
+                           args.eta))
+                else:
+                    print(
+                        "\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f "
+                        % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box))
                 if args.use_tfboard:
                     info = {
                         'loss': loss_temp,
