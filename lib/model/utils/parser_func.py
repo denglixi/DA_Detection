@@ -123,6 +123,8 @@ def parse_args():
 def set_dataset_args(args, test=False):
     if not test:
         data2imdb_dict = get_data2imdb_dict()
+
+        # source domaim
         if args.dataset in data2imdb_dict:
             args.imdb_name = data2imdb_dict[args.dataset]
         elif args.dataset == "pascal_voc":
@@ -186,6 +188,8 @@ def set_dataset_args(args, test=False):
         #     args.imdbval_name = "cityscape_kitti_trainval"
         #     args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES',
         #                      '30']
+
+        # target domain
         data2imdb_inner_dict = get_data2imdb_inner_dict()
         if args.dataset_t in data2imdb_inner_dict:
             args.imdb_name_target = data2imdb_inner_dict[args.dataset_t]
@@ -380,7 +384,7 @@ def get_data2imdb_inner_dict(split='innermt10val', category_split='train'):
     data2imdb_dict = {}
 
     # 1. train on origin mt
-    for ct in all_canteens:
+    for ct in collected_cts:
         for mtN in [0, 10]:
             if mtN == 0:
                 mtNstr = ""
@@ -389,14 +393,13 @@ def get_data2imdb_inner_dict(split='innermt10val', category_split='train'):
             ct_sp = "{}{}".format(split, mtNstr)
 
             if mtN == 0:
-                imdb_name = "food_{}_{}_{}_{}".format(
+                imdb_name = "food_{}_{}_excl{}_{}".format(
                     ct, ct_sp, ct, category_split)
             else:
-                imdb_name = "food_{}_{}_{}_{}_mt{}".format(
-                    ct, ct_sp, ct, split, mtN)
+                imdb_name = "food_{}_{}_excl{}_{}_mt{}".format(
+                    ct, ct_sp, ct, category_split, mtN)
             dataset = "food{}{}".format(ct, mtNstr)
             data2imdb_dict[dataset] = imdb_name
-
 
     return data2imdb_dict
 

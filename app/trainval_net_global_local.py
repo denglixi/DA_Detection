@@ -40,8 +40,12 @@ if __name__ == '__main__':
 
     print('Called with args:')
     print(args)
+
+    # source support:
+    # target support: food_[CollectedCateen]
     args = set_dataset_args(args)
-    #args = set_food_imdb_name(args)
+    # args = set_food_imdb_name(args)
+
     args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]',
                      'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
     args.set_cfgs_target = ['ANCHOR_SCALES', '[8, 16, 32]',
@@ -209,6 +213,9 @@ if __name__ == '__main__':
         data_iter_s = iter(dataloader_s)
         data_iter_t = iter(dataloader_t)
         for step in range(iters_per_epoch):
+
+            # each step: one source iteration and one target iteration
+            #source iteration
             try:
                 data_s = next(data_iter_s)
             except:
@@ -233,8 +240,8 @@ if __name__ == '__main__':
                 + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
             loss_temp += loss.item()
 
+            # target iteration and domain loss
             if args.train_domain_loss:
-
                 # domain label
                 domain_s = Variable(torch.zeros(out_d.size(0)).long().cuda())
                 # global alignment loss

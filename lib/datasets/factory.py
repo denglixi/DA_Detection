@@ -79,12 +79,22 @@ for n in [0, 10, 30, 50, 100]:
         mt_splits += [s+"mt{}".format(n)]
 splits += mt_splits
 
+# split inner dishes to train and val splits
 innersplit = []
 for sp in ['val', 'test']:
     for m in [10, 30, 50]:
         innersplit.append('innermt{}{}'.format(m, sp))
-
 splits += innersplit
+
+# for few shot fine tune in cross domain
+# base on the origin val.txt
+based_split = 'val'
+innerfew = []
+for sp in ['train', 'val']:
+    for m in [10]:
+        for few in [1, 5]:
+            innerfew.append('innermt{}{}few{}mt{}{}'.format(m, based_split, few, m, sp))
+splits += innerfew
 
 # take few sample in inner between dataset of canteen and dataset of excl canteen as training data. And regard the lefts as validation.
 inner_few = []
@@ -106,6 +116,7 @@ for cantee in ['exclYIH', "All", "exclArts", "exclUTown", "Science", "exclScienc
                 name = 'food_{}_{}_{}'.format(cantee, split, category_mt10)
                 __sets[name] = (lambda split=split,
                                 cantee=cantee, category_mt10=category_mt10: food_merge_imdb(split, cantee, category_mt10))
+
 def get_imdb(name):
     """Get an imdb (image database) by name."""
     if name not in __sets:
