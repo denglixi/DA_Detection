@@ -227,7 +227,8 @@ def set_dataset_args(args, test=False):
 
     # for test
     else:
-        data2imdb_val_dict = get_data2imdbval_dict(imgset="test")
+        data2imdb_val_dict = get_data2imdb_inner_dict('innermt10test')
+        #data2imdb_val_dict = get_data2imdbval_dict(imgset="test")
         if args.dataset in data2imdb_val_dict:
             args.imdbval_name = data2imdb_val_dict[args.dataset]
         elif args.dataset == "pascal_voc":
@@ -302,95 +303,42 @@ def get_data2imdbval_dict(imgset, category_imgset='train'):
 
     data2imdbval_dict = {}
 
-    for ct in all_canteens:
+    for ct in collected_cts:
         dataset = "food{}".format(ct)
-        imdbval_name = "food_{}_{}_{}_train_mt10".format(
-            ct, imgset, "excl"+ct)
+        imdbval_name = "food_{}_{}_{}_{}_mt10".format(
+            ct, imgset, "excl"+ct, category_imgset)
         data2imdbval_dict[dataset] = imdbval_name
 
-    for ct in all_canteens:
-        for mtN in [0, 10]:
-            if mtN == 0:
-                ct_sp = imgset
-            else:
-                ct_sp = "{}mt{}".format(imgset, mtN)
-
-            # datasets here only support mtN format
-            dataset = "food{}mt{}".format(ct, mtN)
-            imdbval_name = "food_{}_{}_{}_train_mt{}".format(
-                ct, ct_sp, ct, mtN)
-            data2imdbval_dict[dataset] = imdbval_name
 
     return data2imdbval_dict
 
-    # 2. create excl_dataset -> dataset
-    # cross domain setting
-
-    # for ct in collected_cts:
-    #    for mtN in [0, 10]:
-    #        for fewN in [0, 1, 5]:
-    #            if mtN == 0:
-    #                mtN_str = ""
-    #            else:
-    #                mtN_str = "mt{}".format(mtN)
-
-    #            if fewN == 0:
-    #                fewN_str = ""
-    #            else:
-    #                fewN_str = "few{}".format(fewN)
-
-    #            # datasets here only support mtN format
-    #            # for example:  dataset    -> foodexclArts[mt10]_testArts[few1]
-    #            #               imdb_train -> food_excl
-    #            #               imdb_val   -> food_Arts_inner{}{}val
-
-    #            dataset = "foodexcl{}{}_test{}{}".format(
-    #                ct, mtN_str, ct,  fewN_str)
-
-    #            if fewN == 0:
-    #                imdbval_name = "food_{}_inner{}{}_excl{}_train_mt{}".format(
-    #                    ct, mtN_str, imgset, ct, mtN)  # innermt10val or innermt10test
-    #            else:
-    #                imdbval_name = "food_{}_inner{}{}val_excl{}_train_mt{}".format(
-    #                    ct, fewN_str, mtN_str, ct, mtN)  # it not working anymore . it is like innerfew1mt10val: TODO spliting to val and test
-
-    #            data2imdbval_dict[dataset] = imdbval_name
-
-    # 3. create exclcanteen_finecanteenfewN -> canteenfewN
-
-    # for ct in collected_cts:
-    #    for mtN in [10]:
-    #        for fewN in [1, 5, 10]:
-    #            dataset = "foodexcl{}mt{}_fine{}few{}_test{}few{}".format(
-    #                ct, mtN, ct, fewN, ct, fewN)
-    #            imdbval_name = "food_{}_innerfew{}mt{}val_excl{}_train_mt{}".format(
-    #                ct, fewN, mtN, ct, mtN)
-    #            data2imdbval_dict[dataset] = imdbval_name
-
-    # 4. extra
-
-    #data2imdbval_dict['schoollunch'] = 'schoollunch_{}'.format(args.imgset)
-    # return data2imdbval_dict
 
 
 def get_data2imdb_inner_dict(split='innermt10val', category_split='train'):
+    """get_data2imdb_inner_dict
+    create dataset to imdb_name for crossdomain target training dataset
+
+    :param split:
+    :param category_split:
+    """
     # create canttens
     collected_cts = ["Arts", "Science", "YIH",
                      "UTown", "TechChicken", "TechMixedVeg", "EconomicBeeHoon"]
     excl_cts = ["excl"+x for x in collected_cts]
-    all_canteens = collected_cts + excl_cts + ['All']
 
     # create dict{ dataset -> imdb_name }
     data2imdb_dict = {}
 
-    # 1. train on origin mt
+    ct_sp = split
+    # 1. train on collected_cts_val
+    # 2. test on collected_cts_test
     for ct in collected_cts:
         for mtN in [0, 10]:
             if mtN == 0:
                 mtNstr = ""
             else:
                 mtNstr = "mt{}".format(mtN)
-            ct_sp = "{}{}".format(split, mtNstr)
+
 
             if mtN == 0:
                 imdb_name = "food_{}_{}_excl{}_{}".format(
@@ -400,6 +348,15 @@ def get_data2imdb_inner_dict(split='innermt10val', category_split='train'):
                     ct, ct_sp, ct, category_split, mtN)
             dataset = "food{}{}".format(ct, mtNstr)
             data2imdb_dict[dataset] = imdb_name
+
+    # 3. test on excl_cts_test
+    # TODO: more generize
+    for ct in excl_cts:
+        dataset = "food{}".format(ct)
+        imdb_name = 'food_{}_testmt10_{}_train_mt10'.format(ct, ct)
+        data2imdb_dict[dataset] = imdb_name
+
+
 
     return data2imdb_dict
 
@@ -460,10 +417,3 @@ def get_data2imdb_dict(split='train', category_split='train'):
     # 5.voc
     data2imdb_dict[''] = 'voc'
 
-
-def set_food_imdb_name(args):
-    data2imdb_dict = get_data2imdb_dict()
-    data2imdb_inner_dict = get_data2imdb_inner_dict(split='innermt10val')
-    args.imdb_name = data2imdb_dict[args.dataset]
-    args.imdb_name_target = data2imdb_inner_dict[args.dataset_t]
-    return args
