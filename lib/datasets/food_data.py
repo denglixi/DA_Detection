@@ -91,7 +91,9 @@ class food_merge_imdb(imdb):
             'Food_' + self._cantee,
             'ImageSets',
             self._image_set + '.txt')
-        self.cachedir = os.path.join(self._devkit_path, 'annotations_cache')
+        self.cachedir = os.path.join(self._devkit_path,
+                                     'Food_' + self._cantee,
+                                     'annotations_cache')
 
     def image_path_at(self, i):
         """
@@ -371,19 +373,19 @@ class food_merge_imdb(imdb):
             with open(os.path.join(output_dir, cls + '_pr.pkl'), 'wb') as f:
                 pickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
         print('Mean AP = {:.4f}'.format(np.mean(aps)))
-        #print('~~~~~~~~')
-        #print('Results:')
-        #for ap in aps:
+        # print('~~~~~~~~')
+        # print('Results:')
+        # for ap in aps:
         #    print('{:.3f}'.format(ap))
-        #print('{:.3f}'.format(np.mean(aps)))
-        #print('~~~~~~~~')
-        #print('')
-        #print('--------------------------------------------------------------')
+        # print('{:.3f}'.format(np.mean(aps)))
+        # print('~~~~~~~~')
+        # print('')
+        # print('--------------------------------------------------------------')
         #print('Results computed with the **unofficial** Python eval code.')
         #print('Results should be very close to the official MATLAB eval code.')
         #print('Recompute with `./tools/reval.py --matlab ...` for your paper.')
         #print('-- Thanks, The Management')
-        #print('--------------------------------------------------------------')
+        # print('--------------------------------------------------------------')
 
         return zip(self._classes[1:], aps), np.mean(aps)
 

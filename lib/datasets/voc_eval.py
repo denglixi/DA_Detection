@@ -103,6 +103,7 @@ def get_gt_recs(cachedir, imagesetfile, annopath):
     if not os.path.isdir(cachedir):
         os.mkdir(cachedir)
 
+    # TODO some thing wrong
     cachefile = os.path.join(cachedir, '%s_annots.pkl' %
                              imagesetfile.split('/')[-1])
     # read list of images

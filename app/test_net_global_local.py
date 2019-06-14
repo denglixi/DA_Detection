@@ -53,6 +53,7 @@ if __name__ == '__main__':
     args = set_dataset_args(args, test=True)
 
     test_canteen = args.imdbval_name.split('_')[1]
+
     # food dataset
     # test_canteen = 'TechMixedVeg'
     # args.imdbval_name = 'food_{}_innermt10test_excl{}_train_mt10'.format(
@@ -268,7 +269,12 @@ if __name__ == '__main__':
         all_boxes, output_dir)
     cls_ap = list(cls_ap_zip)
 
-    val_categories = get_categories("{}".format(test_canteen)+"_"+"inner")
+    # for excl canteen
+    if 'excl' in test_canteen:
+        val_categories = get_categories("{}".format(test_canteen)+"_"+"trainmt10")
+    # for collcted canteen cross domain test, which is the inner split
+    else:
+        val_categories = get_categories("{}".format(test_canteen)+"_"+"inner")
     map_exist_cls = []
     if val_categories is not None:
         for cls, ap in cls_ap:
