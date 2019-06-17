@@ -8,6 +8,8 @@ DATASET_T=foodUTown
 # Resume
 RESUME=true
 
+# weather train domain
+
 LOAD_NAME='./models/prefood/foodexclArtsmt10/a.pth'
 
 

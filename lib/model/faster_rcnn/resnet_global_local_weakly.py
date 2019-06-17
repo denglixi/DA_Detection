@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from model.utils.config import cfg
 
-from model.faster_rcnn.faster_rcnn_global_local import _fasterRCNN
+from model.faster_rcnn.faster_rcnn_global_local_weakly import _fasterRCNN
 
 import torch
 import torch.nn as nn
@@ -312,7 +312,7 @@ def resnet152(pretrained=False):
     return model
 
 
-class resnet(_fasterRCNN):
+class resnet_weakly(_fasterRCNN):
     def __init__(self, classes, num_layers=101, pretrained=False, class_agnostic=False, lc=False, gc=False):
         self.model_path = cfg.RESNET_PATH
         self.dout_base_model = 1024
