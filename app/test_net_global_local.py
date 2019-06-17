@@ -87,6 +87,8 @@ if __name__ == '__main__':
     from model.faster_rcnn.vgg16_global_local import vgg16
     from model.faster_rcnn.resnet_global_local import resnet
     from model.faster_rcnn.prefood_res50_attention import PreResNet50Attention
+    from model.faster_rcnn.vgg16_global_local_weakly import vgg16_weakly
+    from model.faster_rcnn.resnet_global_local_weakly import resnet_weakly
 
     if args.net == 'vgg16':
         fasterRCNN = vgg16(imdb.classes, pretrained=True,
@@ -98,6 +100,11 @@ if __name__ == '__main__':
         fasterRCNN = PreResNet50Attention(imdb.classes,  pretrained=True,
                                           class_agnostic=args.class_agnostic,
                                           lc=args.lc, gc=args.gc)
+    if args.net == 'vgg16_weakly':
+        fasterRCNN = vgg16_weakly(imdb.classes, pretrained=True,
+                                  class_agnostic=args.class_agnostic,
+                                  lc=args.lc,
+                                  gc=args.gc)
     # elif args.net == 'res50':
     #  fasterRCNN = resnet(imdb.classes, 50, pretrained=True, class_agnostic=args.class_agnostic,context=args.context)
 
