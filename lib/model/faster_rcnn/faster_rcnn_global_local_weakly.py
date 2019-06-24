@@ -50,18 +50,21 @@ class _fasterRCNN(nn.Module):
         num_boxes = num_boxes.data
 
         # get all vector of class for label
-        cls_label_ind = torch.unique(gt_boxes[:, :, 4].cpu())
-        cls_label = torch.zeros(self.n_classes)
-        cls_label[cls_label_ind.long()] = 1
-        cls_label = cls_label.cuda()
-
+        if self.training and target:
+            cls_label_ind = torch.unique(gt_boxes[:, :, 4].cpu())
+            cls_label = torch.zeros(self.n_classes)
+            cls_label[cls_label_ind.long()] = 1
+            # assume always have backgound categories
+            cls_label[0] = 1
+            cls_label = cls_label.cuda()
+            cls_label.requires_grad = False
 
         # feed image data to base model to obtain base feature map
         base_feat1 = self.RCNN_base1(im_data)
         if self.lc:
             d_pixel, _ = self.netD_pixel(grad_reverse(base_feat1, lambd=eta))
             # print(d_pixel)
-            #if not target:
+            # if not target:
             _, feat_pixel = self.netD_pixel(base_feat1.detach())
         else:
             d_pixel = self.netD_pixel(grad_reverse(base_feat1, lambd=eta))
@@ -140,17 +143,19 @@ class _fasterRCNN(nn.Module):
         cls_prob = F.softmax(cls_score, 1)
 
         # compute the sum of weakly score
-        if target:
+        if self.training and target:
             #cls_prob_sum = torch.sum(cls_prob, 0)
             # x = max(1, x)
             #cls_prob_sum = cls_prob_sum.repeat(2, 1)
             #cls_prob_sum = torch.min(cls_prob_sum, 0)[0]
             max_roi_cls_prob = torch.max(cls_prob, 0)[0]
+            #assert (max_roi_cls_prob.data.cpu().numpy().all() >= 0. and max_roi_cls_prob.data.cpu().numpy().all() <= 1.)
+            if not (max_roi_cls_prob.data.cpu().numpy().all() >= 0. and max_roi_cls_prob.data.cpu().numpy().all() <= 1.):
+                pdb.set_trace()
+            if not (cls_label.data.cpu().numpy().all() >= 0. and cls_label.data.cpu().numpy().all() <= 1.):
+                pdb.set_trace()
             BCE_loss = F.binary_cross_entropy(max_roi_cls_prob, cls_label)
             return d_pixel, domain_p, BCE_loss
-
-
-
 
         RCNN_loss_cls = 0
         RCNN_loss_bbox = 0

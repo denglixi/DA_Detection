@@ -353,7 +353,10 @@ class food_merge_imdb(imdb):
             'Food_' + self._cantee,
             'ImageSets',
             self._image_set + '.txt')
-        cachedir = os.path.join(self._devkit_path, 'annotations_cache')
+        cachedir = os.path.join(self._devkit_path,
+                                'Food_' + self._cantee,
+                                'annotations_cache')
+
         aps = []
         # The PASCAL VOC metric changed in 2010
         # use_07_metric = True if int(self._year) < 2010 else False

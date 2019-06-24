@@ -24,9 +24,11 @@ from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.rpn.bbox_transform import clip_boxes
 from model.nms.nms_wrapper import nms
 from model.rpn.bbox_transform import bbox_transform_inv
-#from model.utils.net_utils import save_net, load_net, vis_detections
+from model.utils.net_utils import save_net, load_net, vis_detections
 from model.utils.parser_func import parse_args, set_dataset_args
 from datasets.food_category import get_categories
+import cv2
+
 
 import pdb
 
@@ -89,6 +91,7 @@ if __name__ == '__main__':
     from model.faster_rcnn.prefood_res50_attention import PreResNet50Attention
     from model.faster_rcnn.vgg16_global_local_weakly import vgg16_weakly
     from model.faster_rcnn.resnet_global_local_weakly import resnet_weakly
+    from model.faster_rcnn.vgg16_global_local_weakly_sum import vgg16_weakly_sum
 
     if args.net == 'vgg16':
         fasterRCNN = vgg16(imdb.classes, pretrained=True,
@@ -100,11 +103,17 @@ if __name__ == '__main__':
         fasterRCNN = PreResNet50Attention(imdb.classes,  pretrained=True,
                                           class_agnostic=args.class_agnostic,
                                           lc=args.lc, gc=args.gc)
-    if args.net == 'vgg16_weakly':
+    elif args.net == 'vgg16_weakly':
         fasterRCNN = vgg16_weakly(imdb.classes, pretrained=True,
                                   class_agnostic=args.class_agnostic,
                                   lc=args.lc,
                                   gc=args.gc)
+
+    elif args.net == 'vgg16_weakly_sum':
+        fasterRCNN = vgg16_weakly_sum(imdb.classes, pretrained=True,
+                                      class_agnostic=args.class_agnostic,
+                                      lc=args.lc,
+                                      gc=args.gc)
     # elif args.net == 'res50':
     #  fasterRCNN = resnet(imdb.classes, 50, pretrained=True, class_agnostic=args.class_agnostic,context=args.context)
 
@@ -224,6 +233,13 @@ if __name__ == '__main__':
             detect_time = det_toc - det_tic
             misc_tic = time.time()
 
+            vis = True
+
+            im2show = None
+            if vis:
+                im = cv2.imread(imdb.image_path_at(i))
+                im2show = np.copy(im)
+
             for j in xrange(1, imdb.num_classes):
                 inds = torch.nonzero(scores[:, j] > thresh).view(-1)
                 # if there is det
@@ -241,6 +257,9 @@ if __name__ == '__main__':
                     cls_dets = cls_dets[order]
                     keep = nms(cls_dets, cfg.TEST.NMS)
                     cls_dets = cls_dets[keep.view(-1).long()]
+                    if vis:
+                        im2show = vis_detections(
+                            im2show, imdb.classes[j], np.array(cls_dets.cpu().numpy()), 0.5, [255, 0, 0])
 
                     all_boxes[j][i] = cls_dets.cpu().numpy()
                 else:
@@ -264,6 +283,79 @@ if __name__ == '__main__':
                              .format(i + 1, num_images, detect_time, nms_time))
             sys.stdout.flush()
 
+            # To save image for analysis
+            # Limit to threshhold detections *over all classes*
+            if vis:
+                threshold_of_vis = 0.1
+                all_boxes_save_for_vis = all_boxes.copy()
+                if max_per_image > 0:
+                    image_scores = np.hstack([all_boxes_save_for_vis[j][i][:, -1]
+                                              for j in xrange(1, imdb.num_classes)])
+                    # np.sort(image_scores)[-max_per_image]
+                    image_thresh = threshold_of_vis
+                    for j in xrange(1, imdb.num_classes):
+                        keep = np.where(
+                            all_boxes_save_for_vis[j][i][:, -1] >= image_thresh)[0]
+                        all_boxes_save_for_vis[j][i] = all_boxes_save_for_vis[j][i][keep, :]
+
+                boxes_of_i = np.array([_[i]
+                                       for _ in all_boxes_save_for_vis])
+
+                # filter boxes with lower score
+                # It is 0 for batch size is 1
+                gt_boxes_cpu = gt_boxes.cpu().numpy()[0]
+                try:
+                    gt_boxes_cpu[:, 0:4] /= float(im_info[0][2].cpu().numpy())
+                except:
+                    pdb.set_trace()
+
+                save_vis_root_path = './savevis/{}/{}/{}_{}_{}/'.format(args.net, args.imdbval_name,
+                                                                        args.checksession, args.checkepoch, args.checkpoint)
+
+                # show ground-truth
+                for gt_b in gt_boxes_cpu:
+                    im2show = vis_detections(
+                        im2show, imdb.classes[int(gt_b[-1])], gt_b[np.newaxis, :], 0.1, (0, 255, 0), False)
+
+                i_row, i_c, _ = im2show.shape
+                im2show = cv2.resize(im2show, (int(i_c/2), int(i_row/2)))
+
+                # save all
+                save_vis_path = save_vis_root_path + \
+                    'All/'
+                if not os.path.exists(save_vis_path):
+                    os.makedirs(save_vis_path)
+                cv2.imwrite(os.path.join(save_vis_path,
+                                         imdb.image_index[i]+'.jpg'), im2show)
+
+                # save by condition
+                # 1.gt未检测到
+                # 2. gt类别错误(TODO)
+                for gt_b in gt_boxes_cpu:
+                    gt_cls_idx = int(gt_b[4])
+                    # 1 && 2
+                    if len(boxes_of_i[gt_cls_idx]) == 0:
+                        save_vis_path = save_vis_root_path + \
+                            'FN/' + imdb.classes[int(gt_cls_idx)]
+                        if not os.path.exists(save_vis_path):
+                            os.makedirs(save_vis_path)
+                        # im2vis_analysis = vis_detections(
+                        #    im2show, imdb.classes[int(gt_b[-1])], gt_b[np.newaxis,:], 0.1, (204, 0, 0))
+                        cv2.imwrite(os.path.join(save_vis_path,
+                                                 imdb.image_index[i]+'.jpg'), im2show)
+
+                gt_classes = [int(_[-1]) for _ in gt_boxes_cpu]
+                # 3. FP
+                for bi, det_b_cls in enumerate(boxes_of_i):
+                    if len(det_b_cls) > 0 and any(det_b_cls[:, 4] > 0.5):
+                        if bi not in gt_classes:
+                            save_vis_path = save_vis_root_path + \
+                                'FP/' + str(imdb.classes[bi])
+                            if not os.path.exists(save_vis_path):
+                                os.makedirs(save_vis_path)
+                            cv2.imwrite(os.path.join(save_vis_path,
+                                                     imdb.image_index[i]+'.jpg'), im2show)
+
         with open(det_file, 'wb') as f:
             pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
@@ -278,7 +370,8 @@ if __name__ == '__main__':
 
     # for excl canteen
     if 'excl' in test_canteen:
-        val_categories = get_categories("{}".format(test_canteen)+"_"+"trainmt10")
+        val_categories = get_categories(
+            "{}".format(test_canteen)+"_"+"trainmt10")
     # for collcted canteen cross domain test, which is the inner split
     else:
         val_categories = get_categories("{}".format(test_canteen)+"_"+"inner")

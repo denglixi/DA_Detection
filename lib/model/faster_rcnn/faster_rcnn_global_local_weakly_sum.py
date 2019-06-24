@@ -50,18 +50,22 @@ class _fasterRCNN(nn.Module):
         num_boxes = num_boxes.data
 
         # get all vector of class for label
-        cls_label_ind = torch.unique(gt_boxes[:, :, 4].cpu())
-        cls_label = torch.zeros(self.n_classes)
-        cls_label[cls_label_ind.long()] = 1
-        cls_label = cls_label.cuda()
-
+        if True:
+        #if self.training and target:
+            cls_label_ind = torch.unique(gt_boxes[:, :, 4].cpu())
+            cls_label = torch.zeros(self.n_classes)
+            cls_label[cls_label_ind.long()] = 1
+            # assume there must exists backgound rois
+            cls_label[0] = 1
+            cls_label = cls_label.cuda()
+            cls_label.requires_grad = False
 
         # feed image data to base model to obtain base feature map
         base_feat1 = self.RCNN_base1(im_data)
         if self.lc:
             d_pixel, _ = self.netD_pixel(grad_reverse(base_feat1, lambd=eta))
             # print(d_pixel)
-            #if not target:
+            # if not target:
             _, feat_pixel = self.netD_pixel(base_feat1.detach())
         else:
             d_pixel = self.netD_pixel(grad_reverse(base_feat1, lambd=eta))
@@ -140,17 +144,24 @@ class _fasterRCNN(nn.Module):
         cls_prob = F.softmax(cls_score, 1)
 
         # compute the sum of weakly score
-        if target:
-            #cls_prob_sum = torch.sum(cls_prob, 0)
+        if True:
+        #if self.training and target and True:
+            pdb.set_trace()
+            cls_score_t = cls_score.transpose(0, 1)
+            weight_of_roi_in_each_cls = F.softmax(cls_score_t, 1)
+            weight_of_roi_in_each_cls = weight_of_roi_in_each_cls.transpose(0, 1)
+            weighted_prob = torch.mul(cls_prob, weight_of_roi_in_each_cls)
+            weighted_prob_sum = weighted_prob.sum(0)
+            # To eliminate the error on bce loss at begining while some value >= 1
+            weighted_prob_sum = torch.clamp(weighted_prob_sum, 0, 1)
+            BCE_loss = F.binary_cross_entropy(weighted_prob_sum, cls_label)
+            # cls_score
+            # cls_prob_sum = torch.sum(cls_prob, 0)
             # x = max(1, x)
-            #cls_prob_sum = cls_prob_sum.repeat(2, 1)
-            #cls_prob_sum = torch.min(cls_prob_sum, 0)[0]
-            max_roi_cls_prob = torch.max(cls_prob, 0)[0]
-            BCE_loss = F.binary_cross_entropy(max_roi_cls_prob, cls_label)
+            # cls_prob_sum = cls_prob_sum.repeat(2, 1)
+            # cls_prob_sum = torch.min(cls_prob_sum, 0)[0]
+            # max_roi_cls_prob = torch.max(cls_prob, 0)[0]
             return d_pixel, domain_p, BCE_loss
-
-
-
 
         RCNN_loss_cls = 0
         RCNN_loss_bbox = 0

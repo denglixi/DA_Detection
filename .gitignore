@@ -4,6 +4,7 @@ path/
 models/
 data/
 data
+savevis/
 
 # READ THIS BEFORE YOU REFACTOR ME
 #

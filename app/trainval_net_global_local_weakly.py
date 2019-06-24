@@ -124,9 +124,16 @@ if __name__ == '__main__':
     from model.faster_rcnn.prefood_res50_attention import PreResNet50Attention
     from model.faster_rcnn.vgg16_global_local_weakly import vgg16_weakly
     from model.faster_rcnn.resnet_global_local_weakly import resnet_weakly
+    from model.faster_rcnn.vgg16_global_local_weakly_sum import vgg16_weakly_sum
 
     if args.net == 'vgg16_weakly':
         fasterRCNN = vgg16_weakly(imdb.classes, pretrained=True,
+                                  class_agnostic=args.class_agnostic,
+                                  lc=args.lc,
+                                  gc=args.gc)
+
+    elif args.net == 'vgg16_weakly_sum':
+        fasterRCNN = vgg16_weakly_sum(imdb.classes, pretrained=True,
                                   class_agnostic=args.class_agnostic,
                                   lc=args.lc,
                                   gc=args.gc)
@@ -259,8 +266,10 @@ if __name__ == '__main__':
                 im_data.data.resize_(data_t[0].size()).copy_(data_t[0])
                 im_info.data.resize_(data_t[1].size()).copy_(data_t[1])
                 # gt is empty
-                gt_boxes.data.resize_(1, 1, 5).zero_()
-                num_boxes.data.resize_(1).zero_()
+                gt_boxes.data.resize_(data_t[2].size()).copy_(data_t[2])
+                num_boxes.data.resize_(data_t[3].size()).copy_(data_t[3])
+                # gt_boxes.data.resize_(1, 1, 5).zero_()
+                # num_boxes.data.resize_(1).zero_()
                 out_d_pixel, out_d, bce_loss = fasterRCNN(
                     im_data, im_info, gt_boxes, num_boxes, target=True)
                 # domain label
@@ -274,7 +283,7 @@ if __name__ == '__main__':
                              dloss_s_p + dloss_t_p) * args.eta
                 else:
                     loss += (dloss_s + dloss_t + dloss_s_p + dloss_t_p) * 10
-                    loss += bce_loss * 10
+                    loss += bce_loss
 
             optimizer.zero_grad()
             loss.backward()

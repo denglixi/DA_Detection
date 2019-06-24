@@ -25,7 +25,7 @@ from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.utils.net_utils import weights_normal_init, save_net, load_net, \
     adjust_learning_rate, save_checkpoint, clip_gradient, FocalLoss, sampler, calc_supp, EFocalLoss
 
-from model.utils.parser_func import parse_args, set_dataset_args, set_food_imdb_name
+from model.utils.parser_func import parse_args, set_dataset_args
 
 
 # def set_imdb_args(args):
