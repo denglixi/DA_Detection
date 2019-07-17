@@ -49,65 +49,31 @@ class _fasterRCNN(nn.Module):
         gt_boxes = gt_boxes.data
         num_boxes = num_boxes.data
 
-        # get all vector of class for label
-        if self.training and target:
-            cls_label_ind = torch.unique(gt_boxes[:, :, 4].cpu())
-            cls_label = torch.zeros(self.n_classes)
-            cls_label[cls_label_ind.long()] = 1
-            # assume always have backgound categories
-            cls_label[0] = 1
-            cls_label = cls_label.cuda()
-            cls_label.requires_grad = False
-
         # feed image data to base model to obtain base feature map
         base_feat1 = self.RCNN_base1(im_data)
         if self.lc:
-            d_pixel, _ = self.netD_pixel_1(grad_reverse(base_feat1, lambd=eta))
+            d_pixel, _ = self.netD_pixel(base_feat1)
             # print(d_pixel)
             if not target:
-                _, feat_pixel = self.netD_pixel_1(base_feat1.detach())
+                _, feat_pixel = self.netD_pixel(base_feat1.detach())
         else:
-            d_pixel = self.netD_pixel_1(grad_reverse(base_feat1, lambd=eta))
-
-        base_feat2 = self.RCNN_base2(base_feat1)
-        if self.lc:
-            d_pixel_2, _ = self.netD_pixel_2(
-                grad_reverse(base_feat2, lambd=eta))
-        else:
-            d_pixel_2 = self.netD_pixel_2(grad_reverse(base_feat2, lambd=eta))
-
-        base_feat3 = self.RCNN_base3(base_feat2)
-        if self.lc:
-            d_pixel_3, _ = self.netD_pixel_3(
-                grad_reverse(base_feat3, lambd=eta))
-        else:
-            d_pixel_3 = self.netD_pixel_3(grad_reverse(base_feat3, lambd=eta))
-            print(d_pixel_3.mean())
-
-        base_feat4 = self.RCNN_base4(base_feat3)
-        if self.gc:
-            d_pixel_4, _ = self.netD_1(grad_reverse(base_feat4, lambd=eta))
-        else:
-            d_pixel_4 = self.netD_1(grad_reverse(base_feat4, lambd=eta))
-
-        base_feat = self.RCNN_base5(base_feat4)
-        # for target domain training, we need to return the d_pixel, domain_p
+            d_pixel = self.netD_pixel(base_feat1)
+        base_feat = self.RCNN_base2(base_feat1)
         if self.gc:
             domain_p, _ = self.netD(grad_reverse(base_feat, lambd=eta))
             if target:
-                return d_pixel, d_pixel_2, d_pixel_3, d_pixel_4, domain_p
+                return d_pixel, domain_p  # , diff
             _, feat = self.netD(base_feat.detach())
         else:
             domain_p = self.netD(grad_reverse(base_feat, lambd=eta))
             if target:
-                return d_pixel, d_pixel_2, d_pixel_3, d_pixel_4, domain_p
-
+                return d_pixel, domain_p  # ,diff
         # feed base feature map tp RPN to obtain rois
         rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(
             base_feat, im_info, gt_boxes, num_boxes)
 
         # if it is training phrase, then use ground trubut bboxes for refining
-        if self.training and not target:
+        if self.training:
             roi_data = self.RCNN_proposal_target(rois, gt_boxes, num_boxes)
             rois, rois_label, rois_target, rois_inside_ws, rois_outside_ws = roi_data
 
@@ -157,7 +123,7 @@ class _fasterRCNN(nn.Module):
 
         # compute bbox offset
         bbox_pred = self.RCNN_bbox_pred(pooled_feat)
-        if self.training and not self.class_agnostic and not target:
+        if self.training and not self.class_agnostic:
             bbox_pred_view = bbox_pred.view(
                 bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
             bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.view(
@@ -168,25 +134,8 @@ class _fasterRCNN(nn.Module):
         cls_score = self.RCNN_cls_score(pooled_feat)
         cls_prob = F.softmax(cls_score, 1)
 
-        # compute the sum of weakly score
-        if False:
-            #cls_prob_sum = torch.sum(cls_prob, 0)
-            # x = max(1, x)
-            #cls_prob_sum = cls_prob_sum.repeat(2, 1)
-            #cls_prob_sum = torch.min(cls_prob_sum, 0)[0]
-            max_roi_cls_prob = torch.max(cls_prob, 0)[0]
-            #assert (max_roi_cls_prob.data.cpu().numpy().all() >= 0. and max_roi_cls_prob.data.cpu().numpy().all() <= 1.)
-            if not (max_roi_cls_prob.data.cpu().numpy().all() >= 0. and max_roi_cls_prob.data.cpu().numpy().all() <= 1.):
-                pdb.set_trace()
-            if not (cls_label.data.cpu().numpy().all() >= 0. and cls_label.data.cpu().numpy().all() <= 1.):
-                pdb.set_trace()
-            BCE_loss = F.binary_cross_entropy(max_roi_cls_prob, cls_label)
-            return d_pixel, domain_p, BCE_loss
-
         RCNN_loss_cls = 0
         RCNN_loss_bbox = 0
-
-        # for weakly detection, concentrate the cls_score and calculate the loss
 
         if self.training:
             # classification loss
@@ -199,8 +148,7 @@ class _fasterRCNN(nn.Module):
         cls_prob = cls_prob.view(batch_size, rois.size(1), -1)
         bbox_pred = bbox_pred.view(batch_size, rois.size(1), -1)
 
-        # return d_pixel, d_pixel_2, d_pixel_3, d_pixel_4, domain_p
-        return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, d_pixel, d_pixel_2, d_pixel_3, d_pixel_4, domain_p  # ,diff
+        return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, d_pixel, domain_p  # ,diff
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):

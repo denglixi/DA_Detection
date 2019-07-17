@@ -13,8 +13,8 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import math
 import torchvision.models as models
-from model.faster_rcnn.faster_rcnn_multiscale import _fasterRCNN
-# from model.faster_rcnn.faster_rcnn_imgandpixellevel_gradcam  import _fasterRCNN
+from model.faster_rcnn.faster_rcnn_global_local_unreversed import _fasterRCNN
+#from model.faster_rcnn.faster_rcnn_imgandpixellevel_gradcam  import _fasterRCNN
 from model.utils.config import cfg
 
 import pdb
@@ -33,13 +33,13 @@ def conv1x1(in_planes, out_planes, stride=1):
 
 
 class netD_pixel(nn.Module):
-    def __init__(self, input_dim, output_dim, context=False):
+    def __init__(self, context=False):
         super(netD_pixel, self).__init__()
-        self.conv1 = conv1x1(input_dim, input_dim)
-        # self.bn1 = nn.BatchNorm2d(256)
-        self.conv2 = conv1x1(input_dim, output_dim)
-        # self.bn2 = nn.BatchNorm2d(128)
-        self.conv3 = conv1x1(output_dim, 1)
+        self.conv1 = conv1x1(256, 256)
+        #self.bn1 = nn.BatchNorm2d(256)
+        self.conv2 = conv1x1(256, 128)
+        #self.bn2 = nn.BatchNorm2d(128)
+        self.conv3 = conv1x1(128, 1)
 
         self.context = context
 
@@ -53,7 +53,6 @@ class netD_pixel(nn.Module):
             x = F.sigmoid(self.conv3(x))
             return x.view(-1, 1), feat  # torch.cat((feat1,feat2),1)#F
         else:
-            pdb.set_trace()
             x = F.sigmoid(self.conv3(x))
             return x.view(-1, 1)  # F.sigmoid(x)
 
@@ -101,7 +100,7 @@ class netD_dc(nn.Module):
         return x
 
 
-class vgg16_multiscale(_fasterRCNN):
+class vgg16_unreversed(_fasterRCNN):
     def __init__(self, classes, pretrained=False, class_agnostic=False, lc=False, gc=False):
         self.model_path = cfg.VGG_PATH
         self.dout_base_model = 512
@@ -126,41 +125,22 @@ class vgg16_multiscale(_fasterRCNN):
         # not using the last maxpool layer
         # print(vgg.features)
         self.RCNN_base1 = nn.Sequential(
-            *list(vgg.features._modules.values())[:5])
+            *list(vgg.features._modules.values())[:14])
 
         self.RCNN_base2 = nn.Sequential(
-            *list(vgg.features._modules.values())[5:10])
-
-        self.RCNN_base3 = nn.Sequential(
-            *list(vgg.features._modules.values())[10:14])
-
-        self.RCNN_base4 = nn.Sequential(
-            *list(vgg.features._modules.values())[14:23])
-
-        self.RCNN_base5 = nn.Sequential(
-            *list(vgg.features._modules.values())[23:-1])
-
+            *list(vgg.features._modules.values())[14:-1])
         # print(self.RCNN_base1)
         # print(self.RCNN_base2)
-        self.netD_pixel_1 = netD_pixel(64,  128, context=self.lc)
-        self.netD_pixel_2 = netD_pixel(128, 64, context=self.lc)
-        self.netD_pixel_3 = netD_pixel(256, 128, context=self.lc)
-        self.netD_pixel_4 = netD_pixel(512, 256, context=self.lc)
-
         self.netD = netD(context=self.gc)
-        self.netD_1 = netD(context=self.gc)
-
+        self.netD_pixel = netD_pixel(context=self.lc)
         feat_d = 4096
         if self.lc:
             feat_d += 128
         if self.gc:
             feat_d += 128
         # Fix the layers before conv3:
-        for layer in range(5):
+        for layer in range(10):
             for p in self.RCNN_base1[layer].parameters():
-                p.requires_grad = False
-        for layer in range(5):
-            for p in self.RCNN_base2[layer].parameters():
                 p.requires_grad = False
 
         # self.RCNN_base = _RCNN_base(vgg.features, self.classes, self.dout_base_model)

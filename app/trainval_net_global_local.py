@@ -124,12 +124,19 @@ if __name__ == '__main__':
     from model.faster_rcnn.vgg16_global_local import vgg16
     from model.faster_rcnn.resnet_global_local import resnet
     from model.faster_rcnn.prefood_res50_attention import PreResNet50Attention
+    from model.faster_rcnn.vgg16_global_local_unreversed import vgg16_unreversed
 
     if args.net == 'vgg16':
         fasterRCNN = vgg16(imdb.classes, pretrained=True,
                            class_agnostic=args.class_agnostic,
                            lc=args.lc,
                            gc=args.gc)
+
+    elif args.net == 'vgg16_unreversed':
+        fasterRCNN = vgg16_unreversed(imdb.classes, pretrained=True,
+                                      class_agnostic=args.class_agnostic,
+                                      lc=args.lc,
+                                      gc=args.gc)
 
     elif args.net == 'res101':
         fasterRCNN = resnet(imdb.classes, 101, pretrained=True,
@@ -215,7 +222,7 @@ if __name__ == '__main__':
         for step in range(iters_per_epoch):
 
             # each step: one source iteration and one target iteration
-            #source iteration
+            # source iteration
             try:
                 data_s = next(data_iter_s)
             except:

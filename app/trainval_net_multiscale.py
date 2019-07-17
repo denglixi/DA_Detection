@@ -243,7 +243,8 @@ if __name__ == '__main__':
                 domain_s = Variable(torch.zeros(out_d.size(0)).long().cuda())
                 # global alignment loss
                 dloss_s = 0.5 * FL(out_d, domain_s)
-                dloss_s += 0.5 * FL(out_d_pixel_4, domain_s) # layer 4
+                # dloss_s += 0.5 * FL(out_d_pixel_4, domain_s)  # layer 4
+
                 # local alignment loss
                 #dloss_s_p = 0.5 * torch.mean(out_d_pixel ** 2)
                 #dloss_s_p += 0.5 * torch.mean(out_d_pixel_2 ** 2)
@@ -269,12 +270,13 @@ if __name__ == '__main__':
                 # domain label
                 domain_t = Variable(torch.ones(out_d.size(0)).long().cuda())
                 dloss_t = 0.5 * FL(out_d, domain_t)
-                dloss_t += 0.5 * FL(out_d_pixel_4, domain_t)
+                #dloss_t += 0.5 * FL(out_d_pixel_4, domain_t)
                 # local alignment loss
                 #dloss_t_p = 0.5 * torch.mean((1 - out_d_pixel) ** 2)
                 #dloss_t_p += 0.5 * torch.mean((1 - out_d_pixel_2) ** 2)
                 dloss_t_p = 0.5 * torch.mean((1 - out_d_pixel_3) ** 2)
                 #dloss_t_p += 0.5 * torch.mean((1 - out_d_pixel_4) ** 2)
+                # sigmoidk
 
                 if args.dataset == 'sim10k':
                     loss += (dloss_s + dloss_t +

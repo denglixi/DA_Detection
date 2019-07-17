@@ -9,5 +9,5 @@ CUDA_VISIBLE_DEVICES=$1 python ./app/trainval_net_multiscale.py \
     --train_domain_loss \
     --dataset cityscape --dataset_t foggy_cityscape \
     --save_dir models \
-    --nw 5
+    #--nw 5
     #--gc --lc \

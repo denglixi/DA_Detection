@@ -233,7 +233,7 @@ if __name__ == '__main__':
             detect_time = det_toc - det_tic
             misc_tic = time.time()
 
-            vis = True
+            vis = False
 
             im2show = None
             if vis:
