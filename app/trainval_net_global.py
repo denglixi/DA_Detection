@@ -34,6 +34,14 @@ if __name__ == '__main__':
     print('Called with args:')
     print(args)
     args = set_dataset_args(args)
+
+    args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]',
+                     'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+    args.set_cfgs_target = ['ANCHOR_SCALES', '[8, 16, 32]',
+                            'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+    args.cfg_file = "cfgs/{}_ls.yml".format(
+        args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
+
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
@@ -106,6 +114,7 @@ if __name__ == '__main__':
     # initilize the network here.
     from model.faster_rcnn.vgg16_global import vgg16
     from model.faster_rcnn.resnet_global import resnet
+    from model.faster_rcnn.prefood_res50_attention import PreResNet50Attention
 
     if args.net == 'vgg16':
         fasterRCNN = vgg16(imdb.classes, pretrained=True,
@@ -116,6 +125,10 @@ if __name__ == '__main__':
     elif args.net == 'res50':
         fasterRCNN = resnet(imdb.classes, 50, pretrained=True,
                             class_agnostic=args.class_agnostic, gc=args.gc)
+    elif args.net == 'prefood':
+        fasterRCNN = PreResNet50Attention(imdb.classes,  pretrained=True,
+                                          class_agnostic=args.class_agnostic,
+                                          lc=False, gc=args.gc)
 
     else:
         print("network is not defined")
@@ -204,7 +217,7 @@ if __name__ == '__main__':
             rois, cls_prob, bbox_pred, \
                 rpn_loss_cls, rpn_loss_box, \
                 RCNN_loss_cls, RCNN_loss_bbox, \
-                rois_label, out_d = fasterRCNN(
+                rois_label, _, out_d = fasterRCNN(
                     im_data, im_info, gt_boxes, num_boxes, eta=eta)
             loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
                 + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
@@ -215,8 +228,8 @@ if __name__ == '__main__':
             im_info.data.resize_(data_t[1].size()).copy_(data_t[1])
             gt_boxes.data.resize_(1, 1, 5).zero_()
             num_boxes.data.resize_(1).zero_()
-            out_d = fasterRCNN(im_data, im_info, gt_boxes,
-                               num_boxes, target=True, eta=eta)
+            _, out_d = fasterRCNN(im_data, im_info, gt_boxes,
+                                  num_boxes, target=True, eta=eta)
             domain_t = Variable(torch.ones(out_d.size(0)).long().cuda())
             dloss_t = 0.5 * FL(out_d, domain_t)
             if args.dataset == 'sim10k':

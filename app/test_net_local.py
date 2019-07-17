@@ -47,6 +47,13 @@ if __name__ == '__main__':
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
     np.random.seed(cfg.RNG_SEED)
 
+    args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]',
+                     'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+    args.set_cfgs_target = ['ANCHOR_SCALES', '[8, 16, 32]',
+                            'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+    args.cfg_file = "cfgs/{}_ls.yml".format(
+        args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
+
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
@@ -56,7 +63,8 @@ if __name__ == '__main__':
     pprint.pprint(cfg)
 
     cfg.TRAIN.USE_FLIPPED = False
-    imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdbval_name, False)
+    imdb, roidb, ratio_list, ratio_index = combined_roidb(
+        args.imdbval_name, False)
     imdb.competition_mode(on=True)
 
     print('{:d} roidb entries'.format(len(roidb)))
@@ -66,9 +74,11 @@ if __name__ == '__main__':
     from model.faster_rcnn.resnet_local import resnet
 
     if args.net == 'vgg16':
-        fasterRCNN = vgg16(imdb.classes, pretrained=True, class_agnostic=args.class_agnostic, lc=args.lc)
+        fasterRCNN = vgg16(imdb.classes, pretrained=True,
+                           class_agnostic=args.class_agnostic, lc=args.lc)
     elif args.net == 'res101':
-        fasterRCNN = resnet(imdb.classes, 101, pretrained=True, class_agnostic=args.class_agnostic, lc=args.lc)
+        fasterRCNN = resnet(imdb.classes, 101, pretrained=True,
+                            class_agnostic=args.class_agnostic, lc=args.lc)
 
     else:
         print("network is not defined")
@@ -119,7 +129,7 @@ if __name__ == '__main__':
                  for _ in xrange(imdb.num_classes)]
 
     output_dir = get_output_dir(imdb, save_name)
-    dataset = roibatchLoader(roidb, ratio_list, ratio_index, 1, \
+    dataset = roibatchLoader(roidb, ratio_list, ratio_index, 1,
                              imdb.num_classes, training=False, normalize=False, path_return=True)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1,
                                              shuffle=False, num_workers=0,
@@ -143,9 +153,10 @@ if __name__ == '__main__':
 
         det_tic = time.time()
         rois, cls_prob, bbox_pred, \
-        rpn_loss_cls, rpn_loss_box, \
-        RCNN_loss_cls, RCNN_loss_bbox, \
-        rois_label, d_pred = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+            rpn_loss_cls, rpn_loss_box, \
+            RCNN_loss_cls, RCNN_loss_bbox, \
+            rois_label, d_pred = fasterRCNN(
+                im_data, im_info, gt_boxes, num_boxes)
 
         scores = cls_prob.data
         boxes = rois.data[:, :, 1:5]
@@ -158,11 +169,11 @@ if __name__ == '__main__':
                 # Optionally normalize targets by a precomputed mean and stdev
                 if args.class_agnostic:
                     box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                                 + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                        + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
                     box_deltas = box_deltas.view(1, -1, 4)
                 else:
                     box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                                 + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                        + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
                     box_deltas = box_deltas.view(1, -1, 4 * len(imdb.classes))
 
             pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
@@ -213,7 +224,7 @@ if __name__ == '__main__':
         misc_toc = time.time()
         nms_time = misc_toc - misc_tic
 
-        sys.stdout.write('im_detect: {:d}/{:d} {:.3f}s {:.3f}s   \r' \
+        sys.stdout.write('im_detect: {:d}/{:d} {:.3f}s {:.3f}s   \r'
                          .format(i + 1, num_images, detect_time, nms_time))
         sys.stdout.flush()
 

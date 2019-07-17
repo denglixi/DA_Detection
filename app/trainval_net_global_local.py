@@ -52,6 +52,7 @@ if __name__ == '__main__':
                             'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
     args.cfg_file = "cfgs/{}_ls.yml".format(
         args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
+
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:

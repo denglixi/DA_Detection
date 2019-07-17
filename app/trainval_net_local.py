@@ -34,6 +34,13 @@ if __name__ == '__main__':
     print('Called with args:')
     print(args)
     args = set_dataset_args(args)
+
+    args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]',
+                     'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+    args.set_cfgs_target = ['ANCHOR_SCALES', '[8, 16, 32]',
+                            'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+    args.cfg_file = "cfgs/{}_ls.yml".format(
+        args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
@@ -53,7 +60,8 @@ if __name__ == '__main__':
     cfg.USE_GPU_NMS = args.cuda
     imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
     train_size = len(roidb)
-    imdb_t, roidb_t, ratio_list_t, ratio_index_t = combined_roidb(args.imdb_name_target)
+    imdb_t, roidb_t, ratio_list_t, ratio_index_t = combined_roidb(
+        args.imdb_name_target)
     train_size_t = len(roidb_t)
     print('{:d} roidb entries'.format(len(roidb)))
     # print('{:d} roidb entries'.format(len(roidb)))
@@ -65,12 +73,12 @@ if __name__ == '__main__':
     sampler_batch = sampler(train_size, args.batch_size)
     sampler_batch_t = sampler(train_size_t, args.batch_size)
 
-    dataset_s = roibatchLoader(roidb, ratio_list, ratio_index, args.batch_size, \
+    dataset_s = roibatchLoader(roidb, ratio_list, ratio_index, args.batch_size,
                                imdb.num_classes, training=True)
 
     dataloader_s = torch.utils.data.DataLoader(dataset_s, batch_size=args.batch_size,
                                                sampler=sampler_batch, num_workers=args.num_workers)
-    dataset_t = roibatchLoader(roidb_t, ratio_list_t, ratio_index_t, args.batch_size, \
+    dataset_t = roibatchLoader(roidb_t, ratio_list_t, ratio_index_t, args.batch_size,
                                imdb.num_classes, training=True)
     dataloader_t = torch.utils.data.DataLoader(dataset_t, batch_size=args.batch_size,
                                                sampler=sampler_batch_t, num_workers=args.num_workers)
@@ -99,12 +107,18 @@ if __name__ == '__main__':
     # initilize the network here.
     from model.faster_rcnn.vgg16_local import vgg16
     from model.faster_rcnn.resnet_local import resnet
+    from model.faster_rcnn.prefood_res50_attention import PreResNet50Attention
 
     if args.net == 'vgg16':
-        fasterRCNN = vgg16(imdb.classes, pretrained=True, class_agnostic=args.class_agnostic, lc=args.lc)
+        fasterRCNN = vgg16(imdb.classes, pretrained=True,
+                           class_agnostic=args.class_agnostic, lc=args.lc)
     elif args.net == 'res101':
         fasterRCNN = resnet(imdb.classes, 101, pretrained=True, class_agnostic=args.class_agnostic,
                             lc=args.lc)
+    elif args.net == 'prefood':
+        fasterRCNN = PreResNet50Attention(imdb.classes,  pretrained=True,
+                                          class_agnostic=args.class_agnostic,
+                                          lc=args.lc, gc=False)
 
     else:
         print("network is not defined")
@@ -121,10 +135,11 @@ if __name__ == '__main__':
     for key, value in dict(fasterRCNN.named_parameters()).items():
         if value.requires_grad:
             if 'bias' in key:
-                params += [{'params': [value], 'lr': lr * (cfg.TRAIN.DOUBLE_BIAS + 1), \
+                params += [{'params': [value], 'lr': lr * (cfg.TRAIN.DOUBLE_BIAS + 1),
                             'weight_decay': cfg.TRAIN.BIAS_DECAY and cfg.TRAIN.WEIGHT_DECAY or 0}]
             else:
-                params += [{'params': [value], 'lr': lr, 'weight_decay': cfg.TRAIN.WEIGHT_DECAY}]
+                params += [{'params': [value], 'lr': lr,
+                            'weight_decay': cfg.TRAIN.WEIGHT_DECAY}]
 
     if args.optimizer == "adam":
         lr = lr * 0.1
@@ -195,24 +210,27 @@ if __name__ == '__main__':
 
             fasterRCNN.zero_grad()
             rois, cls_prob, bbox_pred, \
-            rpn_loss_cls, rpn_loss_box, \
-            RCNN_loss_cls, RCNN_loss_bbox, \
-            rois_label, out_d_pixel = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+                rpn_loss_cls, rpn_loss_box, \
+                RCNN_loss_cls, RCNN_loss_bbox, \
+                rois_label, out_d_pixel, _ = fasterRCNN(
+                    im_data, im_info, gt_boxes, num_boxes)
 
             loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
-                   + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
+                + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
             dloss_s_p = torch.mean(out_d_pixel ** 2) * 0.5
             loss_temp += loss.item()
             im_data.data.resize_(data_t[0].size()).copy_(data_t[0])
             im_info.data.resize_(data_t[1].size()).copy_(data_t[1])
             gt_boxes.data.resize_(1, 1, 5).zero_()
             num_boxes.data.resize_(1).zero_()
-            out_d_pixel = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, target=True)
+            out_d_pixel, _ = fasterRCNN(
+                im_data, im_info, gt_boxes, num_boxes, target=True)
             # backward
             dloss_t_p = torch.mean((1 - out_d_pixel) ** 2) * 0.5
             if args.dataset == 'sim10k':
 
-                loss += (dloss_s_p + dloss_t_p) * args.eta  # + 0.5*(diff_t + diff_s)
+                loss += (dloss_s_p + dloss_t_p) * \
+                    args.eta  # + 0.5*(diff_t + diff_s)
             else:
                 loss += (dloss_s_p + dloss_t_p)
             optimizer.zero_grad()
@@ -241,11 +259,12 @@ if __name__ == '__main__':
                     fg_cnt = torch.sum(rois_label.data.ne(0))
                     bg_cnt = rois_label.data.numel() - fg_cnt
 
-                print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
+                print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e"
                       % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
-                print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end - start))
+                print("\t\t\tfg/bg=(%d/%d), time cost: %f" %
+                      (fg_cnt, bg_cnt, end - start))
                 print(
-                    "\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f dloss s pixel: %.4f dloss t pixel: %.4f" \
+                    "\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f dloss s pixel: %.4f dloss t pixel: %.4f"
                     % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, dloss_s_p, dloss_t_p))
                 if args.use_tfboard:
                     info = {
