@@ -59,6 +59,7 @@ class _fasterRCNN(nn.Module):
         else:
             d_pixel = self.netD_pixel(base_feat1)
         base_feat = self.RCNN_base2(base_feat1)
+
         if self.gc:
             domain_p, _ = self.netD(grad_reverse(base_feat, lambd=eta))
             if target:

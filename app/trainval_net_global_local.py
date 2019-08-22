@@ -126,6 +126,7 @@ if __name__ == '__main__':
     from model.faster_rcnn.resnet_global_local import resnet
     from model.faster_rcnn.prefood_res50_attention import PreResNet50Attention
     from model.faster_rcnn.vgg16_global_local_unreversed import vgg16_unreversed
+    from model.faster_rcnn.resnet_global_local_unreversed import resnet_local_unreversed
 
     if args.net == 'vgg16':
         fasterRCNN = vgg16(imdb.classes, pretrained=True,
@@ -138,6 +139,11 @@ if __name__ == '__main__':
                                       class_agnostic=args.class_agnostic,
                                       lc=args.lc,
                                       gc=args.gc)
+
+    elif args.net == 'res101_local_unreversed':
+        fasterRCNN = resnet_local_unreversed(imdb.classes, 101, pretrained=True,
+                                             class_agnostic=args.class_agnostic,
+                                             lc=args.lc, gc=args.gc)
 
     elif args.net == 'res101':
         fasterRCNN = resnet(imdb.classes, 101, pretrained=True,
