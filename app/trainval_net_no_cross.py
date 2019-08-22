@@ -142,6 +142,7 @@ if __name__ == '__main__':
     elif args.net == 'prefood':
         fasterRCNN = PreResNet50Attention(imdb.classes,  pretrained=True,
                                           class_agnostic=args.class_agnostic,
+                                          fixed_layer=args.fixed_layer,
                                           lc=args.lc, gc=args.gc)
 
     else:

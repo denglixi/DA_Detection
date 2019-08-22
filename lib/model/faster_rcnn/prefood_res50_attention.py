@@ -1041,9 +1041,22 @@ class PreResNet50Attention(_fasterRCNNAttention):
 
         assert self.fixed_layer >= 0 and self.fixed_layer <= 4
 
-        for layer_i in range(self.fixed_layer):
-            for p in self.RCNN_base[layer_i].parameters():
-                p.requires_grad = False
+        #for layer_i in range(self.fixed_layer):
+        #    for p in self.RCNN_base[layer_i].parameters():
+        #        p.requires_grad = False
+        if self.fixed_layer > 0:
+            if self.fixed_layer < 2:
+                for layer_i in range(self.fixed_layer):
+                    for p in self.RCNN_base1[layer_i].parameters():
+                        p.requires_grad = False
+            else:
+                for layer_i in range(2):
+                    for p in self.RCNN_base1[layer_i].parameters():
+                        p.requires_grad = False
+                for layer_i in range(self.fixed_layer - 2):
+                    for p in self.RCNN_base2[layer_i].parameters():
+                        p.requires_grad = False
+
 
         self.RCNN_top = res50_top(self.model_path)
 

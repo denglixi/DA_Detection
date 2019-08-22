@@ -19,6 +19,9 @@ def parse_args():
     parser.add_argument('--net', dest='net',
                         help='vgg16, res101 res50',
                         default='res101', type=str)
+    parser.add_argument('--fixed_layer', dest='fixed_layer',
+                        help='fixed layer in prefood res 50',
+                        default=0, type=int)
     parser.add_argument('--start_epoch', dest='start_epoch',
                         help='starting epoch',
                         default=1, type=int)

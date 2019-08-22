@@ -375,6 +375,8 @@ if __name__ == '__main__':
     # for collcted canteen cross domain test, which is the inner split
     else:
         val_categories = get_categories("{}".format(test_canteen)+"_"+"inner")
+    import pdb
+    pdb.set_trace()
     map_exist_cls = []
     if val_categories is not None:
         for cls, ap in cls_ap:

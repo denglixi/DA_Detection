@@ -8,6 +8,7 @@ savevis/
 global/
 local/
 nocross/
+no_cross/
 
 # READ THIS BEFORE YOU REFACTOR ME
 #

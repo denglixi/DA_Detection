@@ -1,13 +1,14 @@
 #!/bin/sh
 
 # test collected canteen
-DATASET=foodSciencemt10
+DATASET=foodArtsmt10
 
 # test excl canteen
-# DATASET=foodexclScience
+# DATASET=foodexclArts
 
-CUDA_VISIBLE_DEVICES=$1 python ./app/test_net_global_local.py --cuda --net prefood --dataset $DATASET --load_name $2 \
+NET=res101 #{res101, prefood}
+CUDA_VISIBLE_DEVICES=$1 python ./app/test_net_global_local.py --cuda --net $NET --dataset $DATASET --load_name $2 \
+    --gc --lc  \
     --nw 10 \
-    --lc --gc
     #--test_cache
-    #--gc --lc  \
+    #--gc \

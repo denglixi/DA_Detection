@@ -53,7 +53,7 @@ class _fasterRCNN(nn.Module):
         base_feat1 = self.RCNN_base1(im_data)
         if self.lc:
             d_pixel, _ = self.netD_pixel(grad_reverse(base_feat1, lambd=eta))
-            print(d_pixel.mean())
+            #print(d_pixel.mean())
             if not target:
                 _, feat_pixel = self.netD_pixel(base_feat1.detach())
         else:
