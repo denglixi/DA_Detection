@@ -6,9 +6,10 @@ DATASET=foodArtsmt10
 # test excl canteen
 # DATASET=foodexclArts
 
-NET=res101 #{res101, prefood}
-CUDA_VISIBLE_DEVICES=$1 python ./app/test_net_global_local.py --cuda --net $NET --dataset $DATASET --load_name $2 \
-    --gc --lc  \
+NET=res101 #{res101, prefood, res101_local_unreversed}
+CUDA_VISIBLE_DEVICES=$1 python ./app/test_net_global.py --cuda --net $NET --dataset $DATASET --load_name $2 \
+    --gc \
     --nw 10 \
     #--test_cache
     #--gc \
+    #--gc --lc  \

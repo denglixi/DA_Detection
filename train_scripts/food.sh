@@ -12,7 +12,7 @@ DECAY_SETP=5
 
 # !! train_domain_loss is necessary for training the domain align
 
-CUDA_VISIBLE_DEVICES=$1 python ./app/trainval_net_global_local.py --cuda --net res101 \
+CUDA_VISIBLE_DEVICES=$1 python ./app/trainval_net_global_nonFL.py --cuda --net res101 \
    --dataset $DATASET --dataset_t $DATASET_T \
    --save_dir $2 \
    --nw $NW \

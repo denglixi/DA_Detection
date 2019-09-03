@@ -9,6 +9,8 @@ global/
 local/
 nocross/
 no_cross/
+test/
+local_unreversed/
 
 # READ THIS BEFORE YOU REFACTOR ME
 #

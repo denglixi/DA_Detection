@@ -61,14 +61,11 @@ class _fasterRCNN(nn.Module):
         base_feat = self.RCNN_base2(base_feat1)
         if self.gc:
             domain_p, _ = self.netD(grad_reverse(base_feat, lambd=eta))
-            if target:
-                return d_pixel, domain_p  # , diff
             _, feat = self.netD(base_feat.detach())
         else:
             domain_p = self.netD(grad_reverse(base_feat, lambd=eta))
-            if target:
-                return d_pixel, domain_p  # ,diff
         # feed base feature map tp RPN to obtain rois
+
 
         rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(
             base_feat, im_info, gt_boxes, num_boxes)
@@ -113,6 +110,11 @@ class _fasterRCNN(nn.Module):
 
         # feed pooled features to top model
         pooled_feat = self._head_to_tail(pooled_feat)
+        d_cls = self.netD_cls(pooled_feat)
+        if target:
+            return d_pixel, domain_p, d_cls  # ,diff
+
+
         #feat_pixel = torch.zeros(feat_pixel.size()).cuda()
         if self.lc:
             feat_pixel = feat_pixel.view(1, -1).repeat(pooled_feat.size(0), 1)

@@ -142,6 +142,8 @@ class FocalLoss(nn.Module):
         N = inputs.size(0)
         # print(N)
         C = inputs.size(1)
+        import pdb
+        pdb.set_trace()
         if self.sigmoid:
             P = F.sigmoid(inputs)
             # F.softmax(inputs)
@@ -221,8 +223,8 @@ class FocalPseudo(nn.Module):
         N = inputs.size(0)
         C = inputs.size(1)
         inputs = inputs[0, :, :]
-        # print(inputs)
-        # pdb.set_trace()
+        #print(inputs)
+        #pdb.set_trace()
         inputs, ind = torch.max(inputs, 1)
         ones = torch.ones(inputs.size()).cuda()
         value = torch.where(inputs > self.threshold, inputs, ones)

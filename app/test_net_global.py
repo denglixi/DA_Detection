@@ -25,6 +25,7 @@ from model.nms.nms_wrapper import nms
 from model.rpn.bbox_transform import bbox_transform_inv
 from model.utils.net_utils import save_net, load_net, vis_detections
 from model.utils.parser_func import parse_args,set_dataset_args
+from datasets.food_category import get_categories
 
 import pdb
 
@@ -46,6 +47,14 @@ if __name__ == '__main__':
   print('Called with args:')
   print(args)
   args = set_dataset_args(args,test=True)
+
+  test_canteen = args.imdbval_name.split('_')[1]
+
+  args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]',
+                   'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+  args.cfg_file = "cfgs/{}_ls.yml".format(
+      args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
+
   if torch.cuda.is_available() and not args.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
   np.random.seed(cfg.RNG_SEED)
@@ -202,7 +211,7 @@ if __name__ == '__main__':
               cls_boxes = pred_boxes[inds, :]
             else:
               cls_boxes = pred_boxes[inds][:, j * 4:(j + 1) * 4]
-            
+
             cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
             # cls_dets = torch.cat((cls_boxes, cls_scores), 1)
             cls_dets = cls_dets[order]
@@ -231,12 +240,36 @@ if __name__ == '__main__':
       sys.stdout.flush()
 
 
+  end = time.time()
+  print("test time: %0.4fs" % (end - start))
 
   with open(det_file, 'wb') as f:
       pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
   print('Evaluating detections')
-  imdb.evaluate_detections(all_boxes, output_dir)
+  # evaluate mAP
+  cls_ap_zip, dataset_mAP = imdb.evaluate_detections(
+      all_boxes, output_dir)
+  cls_ap = list(cls_ap_zip)
 
-  end = time.time()
-  print("test time: %0.4fs" % (end - start))
+  # for excl canteen
+  if 'excl' in test_canteen:
+      val_categories = get_categories(
+          "{}".format(test_canteen)+"_"+"trainmt10")
+  # for collcted canteen cross domain test, which is the inner split
+  else:
+      val_categories = get_categories("{}".format(test_canteen)+"_"+"inner")
+  map_exist_cls = []
+  if val_categories is not None:
+      for cls, ap in cls_ap:
+          if cls in val_categories:
+              if np.isnan(ap):
+                  continue
+              else:
+                  map_exist_cls.append(ap)
+                  print(cls, ap)
+      map_exist_cls = sum(map_exist_cls) / len(map_exist_cls)
+      print(map_exist_cls)
+  else:
+      print(cls_ap_zip, dataset_mAP)
+

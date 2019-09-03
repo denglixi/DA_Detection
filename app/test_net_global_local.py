@@ -92,6 +92,7 @@ if __name__ == '__main__':
     from model.faster_rcnn.vgg16_global_local_weakly import vgg16_weakly
     from model.faster_rcnn.resnet_global_local_weakly import resnet_weakly
     from model.faster_rcnn.vgg16_global_local_weakly_sum import vgg16_weakly_sum
+    from model.faster_rcnn.resnet_global_local_unreversed import resnet_local_unreversed
 
     if args.net == 'vgg16':
         fasterRCNN = vgg16(imdb.classes, pretrained=True,
@@ -99,6 +100,12 @@ if __name__ == '__main__':
     elif args.net == 'res101':
         fasterRCNN = resnet(imdb.classes, 101, pretrained=True,
                             class_agnostic=args.class_agnostic, lc=args.lc, gc=args.gc)
+
+    elif args.net == 'res101_local_unreversed':
+        fasterRCNN = resnet_local_unreversed(imdb.classes, 101, pretrained=True,
+                                             class_agnostic=args.class_agnostic,
+                                             lc=args.lc, gc=args.gc)
+
     elif args.net == 'prefood':
         fasterRCNN = PreResNet50Attention(imdb.classes,  pretrained=True,
                                           class_agnostic=args.class_agnostic,
@@ -375,8 +382,6 @@ if __name__ == '__main__':
     # for collcted canteen cross domain test, which is the inner split
     else:
         val_categories = get_categories("{}".format(test_canteen)+"_"+"inner")
-    import pdb
-    pdb.set_trace()
     map_exist_cls = []
     if val_categories is not None:
         for cls, ap in cls_ap:

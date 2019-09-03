@@ -20,7 +20,7 @@ from model.utils.net_utils import _smooth_l1_loss, _crop_pool_layer, _affine_gri
 class _fasterRCNN(nn.Module):
     """ faster RCNN """
 
-    def __init__(self, classes, class_agnostic, lc, gc):
+    def __init__(self, classes, class_agnostic, context):
         super(_fasterRCNN, self).__init__()
         self.classes = classes
         self.n_classes = len(classes)
@@ -28,8 +28,7 @@ class _fasterRCNN(nn.Module):
         # loss
         self.RCNN_loss_cls = 0
         self.RCNN_loss_bbox = 0
-        self.lc = lc
-        self.gc = gc
+        self.context = context
         # define rpn
         self.RCNN_rpn = _RPN(self.dout_base_model)
         self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
@@ -50,26 +49,19 @@ class _fasterRCNN(nn.Module):
         num_boxes = num_boxes.data
 
         # feed image data to base model to obtain base feature map
-        base_feat1 = self.RCNN_base1(im_data)
-        if self.lc:
-            d_pixel, _ = self.netD_pixel(grad_reverse(base_feat1, lambd=eta))
-            #print(d_pixel.mean())
-            if not target:
-                _, feat_pixel = self.netD_pixel(base_feat1.detach())
-        else:
-            d_pixel = self.netD_pixel(grad_reverse(base_feat1, lambd=eta))
-        base_feat = self.RCNN_base2(base_feat1)
-        if self.gc:
+        base_feat = self.RCNN_base(im_data)
+
+        if self.context:
             domain_p, _ = self.netD(grad_reverse(base_feat, lambd=eta))
             if target:
-                return d_pixel, domain_p  # , diff
+                domain_p, _ = self.netD(grad_reverse(base_feat, lambd=eta))
+                return domain_p  # , diff
             _, feat = self.netD(base_feat.detach())
         else:
             domain_p = self.netD(grad_reverse(base_feat, lambd=eta))
             if target:
-                return d_pixel, domain_p  # ,diff
+                return domain_p  # ,diff
         # feed base feature map tp RPN to obtain rois
-
         rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(
             base_feat, im_info, gt_boxes, num_boxes)
 
@@ -113,18 +105,13 @@ class _fasterRCNN(nn.Module):
 
         # feed pooled features to top model
         pooled_feat = self._head_to_tail(pooled_feat)
-        #feat_pixel = torch.zeros(feat_pixel.size()).cuda()
-        if self.lc:
-            feat_pixel = feat_pixel.view(1, -1).repeat(pooled_feat.size(0), 1)
-            pooled_feat = torch.cat((feat_pixel, pooled_feat), 1)
-        if self.gc:
+        if self.context:
             feat = feat.view(1, -1).repeat(pooled_feat.size(0), 1)
             pooled_feat = torch.cat((feat, pooled_feat), 1)
-            # compute bbox offset
-
         # compute bbox offset
         bbox_pred = self.RCNN_bbox_pred(pooled_feat)
         if self.training and not self.class_agnostic:
+            # select the corresponding columns according to roi labels
             bbox_pred_view = bbox_pred.view(
                 bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
             bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.view(
@@ -149,7 +136,7 @@ class _fasterRCNN(nn.Module):
         cls_prob = cls_prob.view(batch_size, rois.size(1), -1)
         bbox_pred = bbox_pred.view(batch_size, rois.size(1), -1)
 
-        return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, d_pixel, domain_p  # ,diff
+        return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, domain_p  # ,diff
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):
