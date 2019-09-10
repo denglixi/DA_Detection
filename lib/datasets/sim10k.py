@@ -42,7 +42,6 @@ except NameError:
 class sim10k(imdb):
     def __init__(self, image_set,  devkit_path=None):
         imdb.__init__(self, 'sim10k_'+ image_set)
-        self._year = '2012'
         self._image_set = image_set
         self._devkit_path = cfg_d.SIM10K#self._get_default_path() if devkit_path is None \
             #else devkit_path
@@ -99,7 +98,7 @@ class sim10k(imdb):
         """
         # Example path to image set file:
         # self._devkit_path + /VOCdevkit2007/VOC2007/ImageSets/Main/val.txt
-        image_set_file = os.path.join(self._data_path, 'ImageSets', 'Main',
+        image_set_file = os.path.join(self._data_path, 'ImageSets',
                                       self._image_set + '.txt')
         assert os.path.exists(image_set_file), \
             'Path does not exist: {}'.format(image_set_file)
@@ -111,7 +110,7 @@ class sim10k(imdb):
         """
         Return the default path where PASCAL VOC is expected to be installed.
         """
-        return os.path.join(cfg.DATA_DIR, 'VOCdevkit' + self._year)
+        return os.path.join(cfg.DATA_DIR, 'SIM10K')
 
     def gt_roidb(self):
         """
@@ -150,7 +149,7 @@ class sim10k(imdb):
             print('{} ss roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
-        if int(self._year) == 2007 or self._image_set != 'test':
+        if self._image_set != 'test':
             gt_roidb = self.gt_roidb()
             ss_roidb = self._load_selective_search_roidb(gt_roidb)
             roidb = imdb.merge_roidbs(gt_roidb, ss_roidb)
@@ -163,7 +162,7 @@ class sim10k(imdb):
         return roidb
 
     def rpn_roidb(self):
-        if int(self._year) == 2007 or self._image_set != 'test':
+        if self._image_set != 'test':
             gt_roidb = self.gt_roidb()
             rpn_roidb = self._load_rpn_roidb(gt_roidb)
             roidb = imdb.merge_roidbs(gt_roidb, rpn_roidb)
@@ -273,7 +272,7 @@ class sim10k(imdb):
     def _get_voc_results_file_template(self):
         # VOCdevkit/results/VOC2007/Main/<comp_id>_det_test_aeroplane.txt
         filename = self._get_comp_id() + '_det_' + self._image_set + '_{:s}.txt'
-        filedir = os.path.join(self._devkit_path, 'results',  'Main')
+        filedir = os.path.join(self._devkit_path, 'results',  )
         if not os.path.exists(filedir):
             os.makedirs(filedir)
         path = os.path.join(filedir, filename)
@@ -307,12 +306,11 @@ class sim10k(imdb):
             self._devkit_path,
 
             'ImageSets',
-            'Main',
             self._image_set + '.txt')
         cachedir = os.path.join(self._devkit_path, 'annotations_cache')
         aps = []
         # The PASCAL VOC metric changed in 2010
-        use_07_metric = True if int(self._year) < 2010 else False
+        use_07_metric = False
         print('VOC07 metric? ' + ('Yes' if use_07_metric else 'No'))
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)

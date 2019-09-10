@@ -142,8 +142,6 @@ class FocalLoss(nn.Module):
         N = inputs.size(0)
         # print(N)
         C = inputs.size(1)
-        import pdb
-        pdb.set_trace()
         if self.sigmoid:
             P = F.sigmoid(inputs)
             # F.softmax(inputs)
@@ -350,7 +348,7 @@ def cv2ImgAddText(img, text, left, top, textColor=(0, 0, 255), textSize=140):
         img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(img)
     fontText = ImageFont.truetype(
-        "/home/d/denglixi/faster-rcnn.pytorch/simsun.ttc", textSize, encoding="utf-8")
+        "/home/lixi/faster-rcnn.pytorch/simsun.ttc", textSize, encoding="utf-8")
     #draw.text((left, top), text, textColor, font=fontText)
     return cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
 

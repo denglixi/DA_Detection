@@ -53,7 +53,6 @@ class netD_pixel(nn.Module):
             x = F.sigmoid(self.conv3(x))
             return x.view(-1, 1), feat  # torch.cat((feat1,feat2),1)#F
         else:
-            pdb.set_trace()
             x = F.sigmoid(self.conv3(x))
             return x.view(-1, 1)  # F.sigmoid(x)
 

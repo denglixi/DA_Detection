@@ -240,7 +240,7 @@ if __name__ == '__main__':
             detect_time = det_toc - det_tic
             misc_tic = time.time()
 
-            vis = False
+            vis = True
 
             im2show = None
             if vis:
@@ -305,6 +305,8 @@ if __name__ == '__main__':
                             all_boxes_save_for_vis[j][i][:, -1] >= image_thresh)[0]
                         all_boxes_save_for_vis[j][i] = all_boxes_save_for_vis[j][i][keep, :]
 
+                if all_boxes_save_for_vis[1][i].shape[0] == 0:
+                    continue
                 boxes_of_i = np.array([_[i]
                                        for _ in all_boxes_save_for_vis])
 
