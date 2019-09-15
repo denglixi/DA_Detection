@@ -282,7 +282,7 @@ if __name__ == '__main__':
                     loss += (dloss_s + dloss_t +
                              dloss_s_p + dloss_t_p) * args.eta
                 else:
-                    loss += (dloss_s + dloss_t + dloss_s_p + dloss_t_p) * 10
+                    loss += dloss_s + dloss_t + dloss_s_p + dloss_t_p
 
             optimizer.zero_grad()
             loss.backward()

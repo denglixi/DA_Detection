@@ -82,7 +82,7 @@ class _fasterRCNN(nn.Module):
                 grad_reverse(base_feat3, lambd=eta))
         else:
             d_pixel_3 = self.netD_pixel_3(grad_reverse(base_feat3, lambd=eta))
-            #print(d_pixel_3.mean())
+            # print(d_pixel_3.mean())
 
         base_feat4 = self.RCNN_base4(base_feat3)
         if self.gc:
@@ -90,6 +90,7 @@ class _fasterRCNN(nn.Module):
         else:
             d_pixel_4 = self.netD_1(grad_reverse(base_feat4, lambd=eta))
 
+        # something wrong
         base_feat = self.RCNN_base5(base_feat4)
         # for target domain training, we need to return the d_pixel, domain_p
         if self.gc:
