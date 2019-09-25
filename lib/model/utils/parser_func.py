@@ -117,8 +117,13 @@ def parse_args():
     parser.add_argument('--image_dir', dest='image_dir',
                         help='directory to load images for demo',
                         default="images")
+    parser.add_argument('--vis', dest='vis',
+                        help='visualization mode',
+                        action='store_true')
     parser.add_argument('--test_cache', dest='test_cache',
                         action='store_true')
+    parser.add_argument('--save_for_vis', dest='save_for_vis',
+                        type=bool, default=False)
     args = parser.parse_args()
     return args
 
