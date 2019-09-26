@@ -91,7 +91,8 @@ if __name__ == '__main__':
     dataset_s = roibatchLoader(roidb, ratio_list, ratio_index, args.batch_size,
                                imdb.num_classes, training=True)
 
-    dataloader_s = torch.utils.data.DataLoader(dataset_s, batch_size=args.batch_size,
+    dataloader_s = torch.utils.data.DataLoader(dataset_s,
+                                               batch_size=args.batch_size,
                                                sampler=sampler_batch,
                                                num_workers=args.num_workers)
     dataset_t = roibatchLoader(roidb_t, ratio_list_t,
@@ -106,6 +107,7 @@ if __name__ == '__main__':
     im_info = torch.FloatTensor(1)
     num_boxes = torch.LongTensor(1)
     gt_boxes = torch.FloatTensor(1)
+
     # ship to cuda
     if args.cuda:
         im_data = im_data.cuda()
@@ -118,6 +120,7 @@ if __name__ == '__main__':
     im_info = Variable(im_info)
     num_boxes = Variable(num_boxes)
     gt_boxes = Variable(gt_boxes)
+
     if args.cuda:
         cfg.CUDA = True
 
@@ -192,6 +195,7 @@ if __name__ == '__main__':
         fasterRCNN.cuda()
 
     if args.resume:
+        print("loading checkpoint %s" % (args.load_name))
         checkpoint = torch.load(args.load_name)
         args.session = checkpoint['session']
         args.start_epoch = checkpoint['epoch']
@@ -287,7 +291,7 @@ if __name__ == '__main__':
                     loss += (dloss_s + dloss_t +
                              dloss_s_p + dloss_t_p) * args.eta
                 else:
-                    loss += (dloss_s + dloss_t + dloss_s_p + dloss_t_p) #* 10
+                    loss += (dloss_s + dloss_t + dloss_s_p + dloss_t_p)  # * 10
 
             optimizer.zero_grad()
             loss.backward()

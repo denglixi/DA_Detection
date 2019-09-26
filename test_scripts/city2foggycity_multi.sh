@@ -9,7 +9,7 @@ NET=vgg16_multiscale
 # target domain
 DATASET=foggy_cityscape
 
-CUDA_VISIBLE_DEVICES=$1 python app/test_net_multiscale.py --cuda --net $NET \
+CUDA_VISIBLE_DEVICES=$1 python app/test_net_global_local.py --cuda --net $NET \
     --dataset $DATASET \
     --load_name $2 \
     --nw 5 \

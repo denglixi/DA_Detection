@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # vim:fenc=utf-8
 #
 # Copyright © 2019 denglixi <denglixi@xgpd0>
@@ -75,7 +75,6 @@ def get_det_bbox_with_cls_of_img(all_boxes, img_idx):
     return bboxes
 
 
-
 def get_main_cls(sub_classes):
     main_classes = []
     for i in sub_classes:
@@ -83,6 +82,7 @@ def get_main_cls(sub_classes):
     main_classes = set(main_classes)
     main_classes = list(main_classes)
     return main_classes
+
 
 def pred_boxes_regression(boxes, bbox_pred, scores, classes, cfg, args):
     """pred_boxes_regression
@@ -166,6 +166,7 @@ def show_image(im, bboxes, gt_cls, imdb):
 
     return im2show
 
+
 def cal_top5_accury(bbox, gt_clses_ind):
     if bbox is None or len(bbox) == 0 or len(gt_clses_ind) == 0:
         return 0, 0
@@ -177,6 +178,7 @@ def cal_top5_accury(bbox, gt_clses_ind):
 
     return recall, precision
 
+
 def get_boxes_cls_ind(i, all_boxes, threshold=0.5):
     bboxes = get_det_bbox_with_cls_of_img(all_boxes, i)
     if bboxes is not None:
@@ -187,6 +189,7 @@ def get_boxes_cls_ind(i, all_boxes, threshold=0.5):
         #bboxes = bboxes[::-1]
 
     return bboxes
+
 
 def is_result_ordered(recalls_and_precisions):
     """is_result_ordered
@@ -200,6 +203,7 @@ def is_result_ordered(recalls_and_precisions):
             return False
     return True
 
+
 if __name__ == '__main__':
 
     args = parse_args()
@@ -208,12 +212,10 @@ if __name__ == '__main__':
     test_canteen = args.imdbval_name.split('_')[1]
     #test_canteen = args.dataset.split('_')[1]
 
-
     args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]',
                      'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
     args.cfg_file = "cfgs/{}_ls.yml".format(
         args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
-
 
     if torch.cuda.is_available() and not args.cuda:
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
@@ -223,7 +225,6 @@ if __name__ == '__main__':
         cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
         cfg_from_list(args.set_cfgs)
-
 
     cfg.TRAIN.USE_FLIPPED = False
     imdb, roidb, ratio_list, ratio_index = combined_roidb(
@@ -237,29 +238,32 @@ if __name__ == '__main__':
     all_boxes = [[[] for _ in xrange(num_images)]
                  for _ in xrange(imdb.num_classes)]
 
+    # get detection results of each model from its pkl file
+    art_model1 = './output/res101/food_Arts_innermt10test/global_target_foodArts_eta_0.1_efocal_False_global_context_True_gamma_5_session_1_epoch_14_step_9999.pth/detections.pkl'
+    art_model2 = '/home/lixi/DA_Detection/output/foodres50/food_Arts_innermt10test/globallocal_target_foodArts_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_14_step_9999.pth/detections.pkl'
 
+    model1 = './output/foodres50/food_Science_innermt10test/globallocal_target_foodScience_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_7_step_9999.pth/detections.pkl'
+    model2 = './output/foodres50/food_Science_innermt10test/globallocal_target_foodScience_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_14_step_9999.pth/detections.pkl'
 
-    #### get detection results of each model from its pkl file
-    det_file_dir = './output/res101/food_Arts_innermt10test/global_target_foodArts_eta_0.1_efocal_False_global_context_True_gamma_5_session_1_epoch_14_step_9999.pth/detections.pkl'
-    det_file_dir2 = '/home/lixi/DA_Detection/output/foodres50/food_Arts_innermt10test/globallocal_target_foodArts_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_14_step_9999.pth/detections.pkl'
-
-    baseline_all_boxes = get_all_boxes(det_file_dir)
-    prefood_boxes = get_all_boxes(det_file_dir2)
+    baseline_all_boxes = get_all_boxes(model1)
+    prefood_boxes = get_all_boxes(model2)
 
     ordered_models_results = [baseline_all_boxes, prefood_boxes]
 
-    ### Get groundtruth
+    ordered_models_results = list(map(get_all_boxes, [model1, model2]))
+
+    # Get groundtruth
     imagenames, recs = get_gt_recs(
         imdb.cachedir, imdb.imagesetfile, imdb.annopath)
 
-    ### recognition file
+    # recognition file
     if not os.path.exists('case_study'):
         os.makedirs('case_study')
     recognition_f = open("./case_study/recogniton.txt", 'w')
 
-    ### comparing results of each image between models, saving the eligible image
+    # comparing results of each image between models, saving the eligible image
     for i in range(num_images):
-        ## GT
+        # GT
         R = [obj for obj in recs[imagenames[i]]]
         gt_bbox = np.array([x['bbox'] for x in R])
         gt_cls = np.array([x['name'] for x in R])
@@ -269,15 +273,18 @@ if __name__ == '__main__':
             # some class not in imdb.classes, which means that there are some categories are not included in training data, i.e. categories that are less than 10
             continue
 
-        ## Get detection with cls information [x1,y1,x2,y2,score, cls_ind]
+        # Get detection with cls information [x1,y1,x2,y2,score, cls_ind]
         get_boxes_cls = partial(get_boxes_cls_ind, i, threshold=0.5)
-        orderd_models_boxes_image_i = list(map(get_boxes_cls, ordered_models_results))
+        orderd_models_boxes_image_i = list(
+            map(get_boxes_cls, ordered_models_results))
 
-        ## calculate the accuracy and recall of each image in different models
-        cal_top5_accury_with_gt = partial(cal_top5_accury, gt_clses_ind=gt_clses_ind)
-        recalls_precs_models_image_i = list(map(cal_top5_accury_with_gt, orderd_models_boxes_image_i))
+        # calculate the accuracy and recall of each image in different models
+        cal_top5_accury_with_gt = partial(
+            cal_top5_accury, gt_clses_ind=gt_clses_ind)
+        recalls_precs_models_image_i = list(
+            map(cal_top5_accury_with_gt, orderd_models_boxes_image_i))
 
-        ## save eligible image
+        # save eligible image
         if is_result_ordered(recalls_precs_models_image_i):
             print("image id", i)
             print("image id:{}".format(i), file=recognition_f)
@@ -313,13 +320,15 @@ if __name__ == '__main__':
             if True:
                 im = cv2.imread(imdb.image_path_at(i))
                 count = 0
-                for model_bboxes_imagei in orderd_models_boxes_image_i:#, transfer_boxes, relation_boxes]:
+                # , transfer_boxes, relation_boxes]:
+                for model_bboxes_imagei in orderd_models_boxes_image_i:
                     count += 1
-                    im2show = show_image(im, model_bboxes_imagei, gt_clses_ind, imdb)
+                    im2show = show_image(
+                        im, model_bboxes_imagei, gt_clses_ind, imdb)
                     # exit()
                     cv2.imwrite(
                         "./case_study/{}_{}.jpg".format(i, count), im2show)
                     #cv2.namedWindow("frame", 0)
                     #cv2.resizeWindow("frame", 1700, 900)
                     #cv2.imshow('frame', im2show)
-                    #cv2.waitKey(0)
+                    # cv2.waitKey(0)

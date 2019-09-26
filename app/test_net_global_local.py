@@ -27,9 +27,15 @@ from model.rpn.bbox_transform import bbox_transform_inv
 from model.utils.net_utils import save_net, load_net, vis_detections
 from model.utils.parser_func import parse_args, set_dataset_args
 from datasets.food_category import get_categories
+from model.faster_rcnn.vgg16_global_local import vgg16
+from model.faster_rcnn.resnet_global_local import resnet
+from model.faster_rcnn.prefood_res50_attention import PreResNet50Attention
+from model.faster_rcnn.vgg16_global_local_weakly import vgg16_weakly
+from model.faster_rcnn.resnet_global_local_weakly import resnet_weakly
+from model.faster_rcnn.vgg16_global_local_weakly_sum import vgg16_weakly_sum
+from model.faster_rcnn.resnet_global_local_unreversed import resnet_local_unreversed
+from model.faster_rcnn.vgg16_multiscale import vgg16_multiscale
 import cv2
-
-
 import pdb
 
 try:
@@ -56,11 +62,6 @@ if __name__ == '__main__':
 
     test_canteen = args.imdbval_name.split('_')[1]
 
-    # food dataset
-    # test_canteen = 'TechMixedVeg'
-    # args.imdbval_name = 'food_{}_innermt10test_excl{}_train_mt10'.format(
-    #    test_canteen, test_canteen)
-
     args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]',
                      'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
     args.cfg_file = "cfgs/{}_ls.yml".format(
@@ -86,17 +87,17 @@ if __name__ == '__main__':
     print('{:d} roidb entries'.format(len(roidb)))
 
     # initilize the network here.
-    from model.faster_rcnn.vgg16_global_local import vgg16
-    from model.faster_rcnn.resnet_global_local import resnet
-    from model.faster_rcnn.prefood_res50_attention import PreResNet50Attention
-    from model.faster_rcnn.vgg16_global_local_weakly import vgg16_weakly
-    from model.faster_rcnn.resnet_global_local_weakly import resnet_weakly
-    from model.faster_rcnn.vgg16_global_local_weakly_sum import vgg16_weakly_sum
-    from model.faster_rcnn.resnet_global_local_unreversed import resnet_local_unreversed
 
     if args.net == 'vgg16':
         fasterRCNN = vgg16(imdb.classes, pretrained=True,
                            class_agnostic=args.class_agnostic, lc=args.lc, gc=args.gc)
+
+    elif args.net == 'vgg16_multiscale':
+        fasterRCNN = vgg16_multiscale(imdb.classes, pretrained=False,
+                                      class_agnostic=args.class_agnostic,
+                                      lc=args.lc,
+                                      gc=args.gc)
+
     elif args.net == 'res101':
         fasterRCNN = resnet(imdb.classes, 101, pretrained=True,
                             class_agnostic=args.class_agnostic, lc=args.lc, gc=args.gc)
@@ -110,6 +111,7 @@ if __name__ == '__main__':
         fasterRCNN = PreResNet50Attention(imdb.classes,  pretrained=True,
                                           class_agnostic=args.class_agnostic,
                                           lc=args.lc, gc=args.gc)
+
     elif args.net == 'vgg16_weakly':
         fasterRCNN = vgg16_weakly(imdb.classes, pretrained=True,
                                   class_agnostic=args.class_agnostic,
@@ -121,9 +123,9 @@ if __name__ == '__main__':
                                       class_agnostic=args.class_agnostic,
                                       lc=args.lc,
                                       gc=args.gc)
+
     # elif args.net == 'res50':
     #  fasterRCNN = resnet(imdb.classes, 50, pretrained=True, class_agnostic=args.class_agnostic,context=args.context)
-
     else:
         print("network is not defined")
         pdb.set_trace()
@@ -132,7 +134,7 @@ if __name__ == '__main__':
 
     print("load checkpoint %s" % (args.load_name))
     checkpoint = torch.load(args.load_name)
-    fasterRCNN.load_state_dict(checkpoint['model'])
+    fasterRCNN.load_state_dict(checkpoint['model'], strict=False)
     if 'pooling_mode' in checkpoint.keys():
         cfg.POOLING_MODE = checkpoint['pooling_mode']
 
@@ -194,17 +196,31 @@ if __name__ == '__main__':
 
             data = next(data_iter)
             im_data.data.resize_(data[0].size()).copy_(data[0])
-            # print(data[0].size())
             im_info.data.resize_(data[1].size()).copy_(data[1])
             gt_boxes.data.resize_(data[2].size()).copy_(data[2])
             num_boxes.data.resize_(data[3].size()).copy_(data[3])
 
             det_tic = time.time()
-            rois, cls_prob, bbox_pred, \
-                rpn_loss_cls, rpn_loss_box, \
-                RCNN_loss_cls, RCNN_loss_bbox, \
-                rois_label, d_pred, _ = fasterRCNN(
-                    im_data, im_info, gt_boxes, num_boxes)
+            fasterRCNN_result = fasterRCNN(
+                im_data, im_info, gt_boxes, num_boxes)
+            if len(fasterRCNN_result) == 10:
+                # normal global local model
+                rois, cls_prob, bbox_pred, \
+                    rpn_loss_cls, rpn_loss_box, \
+                    RCNN_loss_cls, RCNN_loss_bbox, \
+                    rois_label, d_pred, _ = fasterRCNN_result
+            if len(fasterRCNN_result) == 9:
+                # normal global or local model
+                rois, cls_prob, bbox_pred, \
+                    rpn_loss_cls, rpn_loss_box, \
+                    RCNN_loss_cls, RCNN_loss_bbox, \
+                    rois_label, d_pred = fasterRCNN_result
+            elif len(fasterRCNN_result) == 13:
+                # vgg16_multiscale model
+                rois, cls_prob, bbox_pred, \
+                    rpn_loss_cls, rpn_loss_box, \
+                    RCNN_loss_cls, RCNN_loss_bbox, \
+                    rois_label, d_pred, _, _1, _2, _3 = fasterRCNN_result
 
             scores = cls_prob.data
             boxes = rois.data[:, :, 1:5]
@@ -240,7 +256,7 @@ if __name__ == '__main__':
             detect_time = det_toc - det_tic
             misc_tic = time.time()
 
-            vis = True
+            vis = args.vis
 
             im2show = None
             if vis:
@@ -397,3 +413,9 @@ if __name__ == '__main__':
         print(map_exist_cls)
     else:
         print(cls_ap_zip, dataset_mAP)
+
+    save_record_file_path = "/".join(args.load_name.split('/')[:-1])
+    load_model_name = args.load_name.split('/')[-1]
+    with open(save_record_file_path + '/record.txt', 'a') as f:
+        f.write(str(load_model_name) + '\t')
+        f.write(str(map_exist_cls) + '\n')

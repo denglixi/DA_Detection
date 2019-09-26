@@ -1,5 +1,6 @@
 # coding:utf-8
 
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,6 +12,7 @@ from model.roi_crop.functions.roi_crop import RoICropFunction
 import cv2
 import pdb
 import random
+import os
 from torch.utils.data.sampler import Sampler
 from PIL import Image, ImageDraw, ImageFont
 
@@ -221,8 +223,8 @@ class FocalPseudo(nn.Module):
         N = inputs.size(0)
         C = inputs.size(1)
         inputs = inputs[0, :, :]
-        #print(inputs)
-        #pdb.set_trace()
+        # print(inputs)
+        # pdb.set_trace()
         inputs, ind = torch.max(inputs, 1)
         ones = torch.ones(inputs.size()).cuda()
         value = torch.where(inputs > self.threshold, inputs, ones)
@@ -347,8 +349,9 @@ def cv2ImgAddText(img, text, left, top, textColor=(0, 0, 255), textSize=140):
     if (isinstance(img, np.ndarray)):  # 判断是否OpenCV图片类型
         img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(img)
+    ttc_path = os.path.join(os.path.dirname(__file__), 'simsun.ttc')
     fontText = ImageFont.truetype(
-        "/home/lixi/faster-rcnn.pytorch/simsun.ttc", textSize, encoding="utf-8")
+        ttc_path, textSize, encoding="utf-8")
     #draw.text((left, top), text, textColor, font=fontText)
     return cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
 
@@ -357,9 +360,6 @@ def adjust_learning_rate(optimizer, decay=0.1):
     """Sets the learning rate to the initial LR decayed by 0.5 every 20 epochs"""
     for param_group in optimizer.param_groups:
         param_group['lr'] = decay * param_group['lr']
-
-
-import math
 
 
 def calc_supp(iter, iter_total=80000):

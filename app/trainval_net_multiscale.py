@@ -244,7 +244,6 @@ if __name__ == '__main__':
                 # global alignment loss
                 dloss_s = 0.5 * FL(out_d, domain_s)
                 # dloss_s += 0.5 * FL(out_d_pixel_4, domain_s)  # layer 4
-
                 # local alignment loss
                 #dloss_s_p = 0.5 * torch.mean(out_d_pixel ** 2)
                 #dloss_s_p += 0.5 * torch.mean(out_d_pixel_2 ** 2)

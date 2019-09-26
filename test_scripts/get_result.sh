@@ -32,7 +32,7 @@ IMGSET=test
 
 
 # test collected canteen
-DATASET=foodArtsmt10
+DATASET=foodSciencemt10
 
 # test excl canteen
 # DATASET=foodexclArts
