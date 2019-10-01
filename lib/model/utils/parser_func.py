@@ -124,6 +124,14 @@ def parse_args():
                         action='store_true')
     parser.add_argument('--save_for_vis', dest='save_for_vis',
                         type=bool, default=False)
+
+    # for case study
+    parser.add_argument('--model1', dest='model1',
+                        help='case_study_model1_path',
+                        default="", type=str)
+    parser.add_argument('--model2', dest='model2',
+                        help='case_study_model2_path',
+                        default="", type=str)
     args = parser.parse_args()
     return args
 

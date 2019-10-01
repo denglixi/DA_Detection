@@ -32,7 +32,7 @@ IMGSET=test
 
 
 # test collected canteen
-DATASET=foodSciencemt10
+DATASET=foodYIHmt10
 
 # test excl canteen
 # DATASET=foodexclArts
@@ -54,16 +54,18 @@ IS_TEST_CACHE=true
 # whether save all detection results in images
 SAVE_FOR_VIS= # blank for false
 
+Model1='/home/d/denglixi/faster-rcnn.pytorch/output/foodres50/food_YIH_innermt10test/faster_rcnn_5_14_11545/detections.pkl'
+Model2='/home/d/denglixi/DA_Detection/output/foodres50/food_YIH_innermt10test/globallocal_target_foodYIH_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_14_step_9999.pth/detections.pkl'
 
 if $IS_VIS ;then
     CUDA_VISIBLE_DEVICES=$GPU_ID python ./app/draw_det_results.py --dataset $DATASET --net $NET \
                    --checksession $SESSION --checkepoch $EPOCH --checkpoint $CHECKPOINT \
-                   --cuda --vis --save_for_vis=$SAVE_FOR_VIS
+                   --cuda --vis --save_for_vis=$SAVE_FOR_VIS --model1 $Model1 --model2 $Model2
 elif $IS_TEST_CACHE ; then
     CUDA_VISIBLE_DEVICES=$GPU_ID python ./app/draw_det_results.py --dataset $DATASET --net $NET \
                    --checksession $SESSION --checkepoch $EPOCH --checkpoint $CHECKPOINT \
-                   --cuda --test_cache --save_for_vis=$SAVE_FOR_VIS
+                   --cuda --test_cache --save_for_vis=$SAVE_FOR_VIS --model1 $Model1 --model2 $Model2
 else
     CUDA_VISIBLE_DEVICES=$GPU_ID python ./app/draw_det_results.py --dataset $DATASET --net $NET SESSION --checkepoch $EPOCH --checkpoint $CHECKPOINT \
-                   --cuda --save_for_vis=$SAVE_FOR_VIS
+                   --cuda --save_for_vis=$SAVE_FOR_VIS --model1 $Model1 --model2 $Model2
 fi

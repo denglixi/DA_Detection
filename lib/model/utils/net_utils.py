@@ -333,7 +333,7 @@ def vis_detections(im, class_name, dets, thresh=0.1, color=(233, 174, 61), is_sh
         bbox = tuple(int(np.round(x)) for x in dets[i, :4])
         score = dets[i, -1]
         if score > thresh:
-            cv2.rectangle(im, bbox[0:2], bbox[2:4], color, 2)
+            cv2.rectangle(im, bbox[0:2], bbox[2:4], color, 5)
             textColor = (color[2], color[1], color[0])
             im = cv2ImgAddText(im, class_name + ":" + "{:.2f}".format(score),
                                bbox[0], bbox[1] + 20, textColor=textColor)

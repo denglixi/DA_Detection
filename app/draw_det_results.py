@@ -162,6 +162,7 @@ def show_image(im, bboxes, gt_cls, imdb):
             ],
             np.array([bboxes[b_i, :5], ]),
             color=color,
+            is_show_text=False
         )
 
     return im2show
@@ -245,8 +246,11 @@ if __name__ == '__main__':
     model1 = './output/foodres50/food_Science_innermt10test/globallocal_target_foodScience_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_7_step_9999.pth/detections.pkl'
     model2 = './output/foodres50/food_Science_innermt10test/globallocal_target_foodScience_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_14_step_9999.pth/detections.pkl'
 
-    baseline_all_boxes = get_all_boxes(model1)
-    prefood_boxes = get_all_boxes(model2)
+    model1 = '/home/d/denglixi/faster-rcnn.pytorch/output/foodres50/food_YIH_innermt10test/faster_rcnn_5_14_11545/detections.pkl'
+    model2 = '/home/d/denglixi/DA_Detection/output/foodres50/food_YIH_innermt10test/globallocal_target_foodYIH_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_14_step_9999.pth/detections.pkl'
+
+    baseline_all_boxes = get_all_boxes(args.model1)
+    prefood_boxes = get_all_boxes(args.model2)
 
     ordered_models_results = [baseline_all_boxes, prefood_boxes]
 
