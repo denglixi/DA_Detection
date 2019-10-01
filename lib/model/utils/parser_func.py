@@ -132,6 +132,8 @@ def parse_args():
     parser.add_argument('--model2', dest='model2',
                         help='case_study_model2_path',
                         default="", type=str)
+    parser.add_argument('--model_result_paths', nargs="*", dest='model_result_paths',
+                        help='case_study_model2_path')
     args = parser.parse_args()
     return args
 
@@ -325,9 +327,7 @@ def get_data2imdbval_dict(imgset, category_imgset='train'):
             ct, imgset, "excl"+ct, category_imgset)
         data2imdbval_dict[dataset] = imdbval_name
 
-
     return data2imdbval_dict
-
 
 
 def get_data2imdb_inner_dict(split='innermt10val', category_split='train'):
@@ -355,7 +355,6 @@ def get_data2imdb_inner_dict(split='innermt10val', category_split='train'):
             else:
                 mtNstr = "mt{}".format(mtN)
 
-
             if mtN == 0:
                 imdb_name = "food_{}_{}_excl{}_{}".format(
                     ct, ct_sp, ct, category_split)
@@ -371,8 +370,6 @@ def get_data2imdb_inner_dict(split='innermt10val', category_split='train'):
         dataset = "food{}".format(ct)
         imdb_name = 'food_{}_testmt10_{}_train_mt10'.format(ct, ct)
         data2imdb_dict[dataset] = imdb_name
-
-
 
     return data2imdb_dict
 
@@ -422,8 +419,9 @@ def get_data2imdb_dict(split='train', category_split='train'):
     for ct in collected_cts:
         for mtN in [10]:
             for fewN in [1, 5]:
-                dataset = 'food{}mt{}_few{}'.format(ct,mtN,fewN)
-                imdb_name = 'food_{}_innermt{}valfew{}mt{}train_excl{}_{}_mt{}'.format(ct, mtN, fewN, mtN,ct, split, mtN )
+                dataset = 'food{}mt{}_few{}'.format(ct, mtN, fewN)
+                imdb_name = 'food_{}_innermt{}valfew{}mt{}train_excl{}_{}_mt{}'.format(
+                    ct, mtN, fewN, mtN, ct, split, mtN)
                 data2imdb_dict[dataset] = imdb_name
 
     # 4. extra
@@ -432,4 +430,3 @@ def get_data2imdb_dict(split='train', category_split='train'):
 
     # 5.voc
     data2imdb_dict[''] = 'voc'
-

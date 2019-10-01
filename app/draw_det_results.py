@@ -202,6 +202,7 @@ def is_result_ordered(recalls_and_precisions):
         # need to eliminate the situation that results are equal
         if r_and_p_first[0] > r_and_p[0] or r_and_p_first[1] > r_and_p[1] or (r_and_p_first[0] == r_and_p[0] and r_and_p_first[1] == r_and_p[1]):
             return False
+        r_and_p_first = r_and_p
     return True
 
 
@@ -240,21 +241,7 @@ if __name__ == '__main__':
                  for _ in xrange(imdb.num_classes)]
 
     # get detection results of each model from its pkl file
-    art_model1 = './output/res101/food_Arts_innermt10test/global_target_foodArts_eta_0.1_efocal_False_global_context_True_gamma_5_session_1_epoch_14_step_9999.pth/detections.pkl'
-    art_model2 = '/home/lixi/DA_Detection/output/foodres50/food_Arts_innermt10test/globallocal_target_foodArts_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_14_step_9999.pth/detections.pkl'
-
-    model1 = './output/foodres50/food_Science_innermt10test/globallocal_target_foodScience_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_7_step_9999.pth/detections.pkl'
-    model2 = './output/foodres50/food_Science_innermt10test/globallocal_target_foodScience_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_14_step_9999.pth/detections.pkl'
-
-    model1 = '/home/d/denglixi/faster-rcnn.pytorch/output/foodres50/food_YIH_innermt10test/faster_rcnn_5_14_11545/detections.pkl'
-    model2 = '/home/d/denglixi/DA_Detection/output/foodres50/food_YIH_innermt10test/globallocal_target_foodYIH_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_14_step_9999.pth/detections.pkl'
-
-    baseline_all_boxes = get_all_boxes(args.model1)
-    prefood_boxes = get_all_boxes(args.model2)
-
-    ordered_models_results = [baseline_all_boxes, prefood_boxes]
-
-    ordered_models_results = list(map(get_all_boxes, [model1, model2]))
+    ordered_models_results = list(map(get_all_boxes, args.model_result_paths))
 
     # Get groundtruth
     imagenames, recs = get_gt_recs(
@@ -289,7 +276,17 @@ if __name__ == '__main__':
             map(cal_top5_accury_with_gt, orderd_models_boxes_image_i))
 
         # save eligible image
-        if is_result_ordered(recalls_precs_models_image_i):
+        # construct ordered
+        # case1: faster < local < local + global
+        # case2: faster < global < local + global
+
+        r_p_case1 = [recalls_precs_models_image_i[0],
+                     recalls_precs_models_image_i[1], recalls_precs_models_image_i[3]]
+        r_p_case2 = [recalls_precs_models_image_i[0],
+                     recalls_precs_models_image_i[2], recalls_precs_models_image_i[3]]
+
+        # if is_result_ordered(recalls_precs_models_image_i):
+        if is_result_ordered(r_p_case1) and is_result_ordered(r_p_case2):
             print("image id", i)
             print("image id:{}".format(i), file=recognition_f)
             for r_and_p in recalls_precs_models_image_i:
