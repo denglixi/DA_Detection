@@ -18,6 +18,7 @@ CUDA_VISIBLE_DEVICES=$1 python ./app/trainval_weakly_backbone.py --cuda --net re
    --nw $NW \
    --bce_alpha 3 \
    --lr_decay_step=$DECAY_SETP \
-   --train_domain_loss
+   --train_domain_loss \
+   --weakly_type sum
    # --fixed_layer=4 \
    #--gc --lc \

@@ -136,8 +136,12 @@ if __name__ == '__main__':
 
     # initilize the network here.
 
-    fasterRCNN = FasterRCNN_Weakly(imdb.classes, class_agnostic=args.class_agnostic,
-                                   lc=args.lc, gc=args.gc, backbone_type='res101', pretrained=True)
+    fasterRCNN = FasterRCNN_Weakly(imdb.classes,
+                                   class_agnostic=args.class_agnostic,
+                                   lc=args.lc, gc=args.gc,
+                                   backbone_type='res101',
+                                   pretrained=True,
+                                   weakly_type=args.weakly_type)
     fasterRCNN.create_architecture()
 
     lr = cfg.TRAIN.LEARNING_RATE

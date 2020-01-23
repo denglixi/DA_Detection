@@ -127,6 +127,10 @@ def parse_args():
                         action='store_true')
     parser.add_argument('--save_for_vis', dest='save_for_vis',
                         type=bool, default=False)
+    # for weakly detection
+    parser.add_argument('--weakly_type', dest='weakly_type',
+                        help='case_study_model1_path',
+                        default="max", type=str)
 
     # for case study
     parser.add_argument('--model1', dest='model1',
