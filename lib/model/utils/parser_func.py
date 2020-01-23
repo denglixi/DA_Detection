@@ -86,6 +86,9 @@ def parse_args():
     parser.add_argument('--eta', dest='eta',
                         help='trade-off parameter between detection loss and domain-alignment loss. Used for Car datasets',
                         default=0.1, type=float)
+    parser.add_argument('--bce_alpha', dest='bce_alpha',
+                        help='trade-off parameter between detection loss and weakly detection loss. Used for weakly cross domain detection',
+                        default=1, type=float)
     parser.add_argument('--train_domain_loss', dest='train_domain_loss',
                         help='whether add the domain loss for training',
                         action='store_true')

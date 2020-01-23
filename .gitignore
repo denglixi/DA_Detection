@@ -12,6 +12,7 @@ no_cross/
 test/
 local_unreversed/
 case_study/
+res*
 
 # READ THIS BEFORE YOU REFACTOR ME
 #
