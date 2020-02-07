@@ -145,6 +145,14 @@ def parse_args():
     return args
 
 
+def set_dataset_test_on_target_train(args):
+    data2imdb_inner_dict_val = get_data2imdb_inner_dict()
+    if args.dataset in data2imdb_inner_dict_val:
+        args.imdb_name = data2imdb_inner_dict_val[args.dataset]
+        args.imdbval_name = data2imdb_inner_dict_val[args.dataset]
+    return args
+
+
 def set_dataset_args(args, test=False):
     if not test:
         data2imdb_dict = get_data2imdb_dict()
@@ -152,6 +160,7 @@ def set_dataset_args(args, test=False):
         # source domaim
         if args.dataset in data2imdb_dict:
             args.imdb_name = data2imdb_dict[args.dataset]
+            args.imdbval_name = data2imdb_dict[args.dataset]
         elif args.dataset == "pascal_voc":
             args.imdb_name = "voc_2007_trainval"
             args.imdbval_name = "voc_2007_test"
@@ -218,6 +227,7 @@ def set_dataset_args(args, test=False):
         data2imdb_inner_dict = get_data2imdb_inner_dict()
         if args.dataset_t in data2imdb_inner_dict:
             args.imdb_name_target = data2imdb_inner_dict[args.dataset_t]
+            args.imdbval_name_target = data2imdb_inner_dict[args.dataset_t]
         elif args.dataset_t == "water":
             args.imdb_name_target = "water_train"
             args.imdbval_name_target = "water_train"
@@ -255,6 +265,7 @@ def set_dataset_args(args, test=False):
         data2imdb_val_dict = get_data2imdb_inner_dict('innermt10test')
         #data2imdb_val_dict = get_data2imdbval_dict(imgset="test")
         if args.dataset in data2imdb_val_dict:
+            args.imdb_name = data2imdb_val_dict[args.dataset]
             args.imdbval_name = data2imdb_val_dict[args.dataset]
         elif args.dataset == "pascal_voc":
             args.imdb_name = "voc_2007_trainval"
@@ -392,6 +403,8 @@ def get_data2imdb_dict(split='train', category_split='train'):
     data2imdb_dict = {}
 
     # 1. train on origin mt
+    # foodArtsmt10: food_Arts_train_mt10_Arts_train_mt10
+    # foodexclArtsmt10: food_exclArts_train_mt10_exlcArts_train_mt10
     for ct in all_canteens:
         for mtN in [0, 10]:
             if mtN == 0:

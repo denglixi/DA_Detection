@@ -32,26 +32,32 @@ from model.faster_rcnn.faster_rcnn_global_local_backbone import FasterRCNN
 
 
 class FasterRCNN_Weakly(FasterRCNN):
-    def __init__(self, classes, class_agnostic, lc, gc, backbone_type='res101', pretrained=False):
+    def __init__(self, classes, class_agnostic, lc, gc, backbone_type='res101', pretrained=False, weakly_type='max'):
         super(FasterRCNN_Weakly, self).__init__(
-            classes, class_agnostic, lc, gc, backbone_type, pretrained, weakly_type='max')
+            classes, class_agnostic, lc, gc, backbone_type, pretrained)
         self.weakly_type = weakly_type
 
     def forward(self, im_data, im_info, gt_boxes, num_boxes, target=False,  eta=1.0):
-        batch_size = im_data.size(0)
+        DEBUG = False
+        if DEBUG:
+            print("debug........")
 
+        batch_size = im_data.size(0)
         im_info = im_info.data
         gt_boxes = gt_boxes.data
         num_boxes = num_boxes.data
 
         # get all vector of class for label
-        if self.training and target:
+        if self.training and target or DEBUG:
             cls_label_ind = torch.unique(gt_boxes[:, :, 4].cpu())
+            cls_label_ind = cls_label_ind[cls_label_ind <
+                                          self.n_classes]
             cls_label = torch.zeros(self.n_classes)
             cls_label[cls_label_ind.long()] = 1
             # assume always have backgound categories
             cls_label[0] = 1
             cls_label = cls_label.cuda()
+            cls_label.clamp(0, 1)
             cls_label.requires_grad = False
 
         # feed image data to base model to obtain base feature map
@@ -64,10 +70,11 @@ class FasterRCNN_Weakly(FasterRCNN):
             base_feat, eta, target)
 
         # feed base feature map tp RPN to obtain rois
+        # ignore gt_box of  target
         rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(
-            base_feat, im_info, gt_boxes, num_boxes)
+            base_feat, im_info, gt_boxes, num_boxes, force_test_mode=target)
         rois, rois_label, rois_target, rois_inside_ws, rois_outside_ws = self.forward_region_proposal(
-            rois, gt_boxes, num_boxes)
+            rois, gt_boxes, num_boxes, force_test_mode=target)
         if not self.training:
             rpn_loss_cls = 0
             rpn_loss_bbox = 0
@@ -85,14 +92,33 @@ class FasterRCNN_Weakly(FasterRCNN):
 
         # compute bbox offset
         bbox_pred = self.RCNN_bbox_pred(pooled_feat)
-        bbox_pred = self.bbox_pred_norm(bbox_pred, rois_label)
+        bbox_pred = self.bbox_pred_norm(
+            bbox_pred, rois_label, force_test_mode=target)
 
         # compute object classification probability
         cls_score = self.RCNN_cls_score(pooled_feat)
         cls_prob = F.softmax(cls_score, 1)
 
+        # for test only
+
+        if DEBUG:
+            max_roi_cls_prob = torch.max(cls_prob, 0)[0]
+            max_zero = torch.zeros_like(max_roi_cls_prob)
+            max_one = torch.ones_like(max_roi_cls_prob)
+
+            select_max = torch.where(max_roi_cls_prob > 0.2, max_one, max_zero)
+            print(select_max)
+            print(cls_label)
+            BCE_loss = F.binary_cross_entropy(
+                max_roi_cls_prob, cls_label)
+            print(BCE_loss)
+
         if self.training and target:
             if self.weakly_type == 'max':
+                #     c1 c2 c3
+                # b1   1
+                # b2
+                # b3
                 #cls_prob_sum = torch.sum(cls_prob, 0)
                 # x = max(1, x)
                 #cls_prob_sum = cls_prob_sum.repeat(2, 1)
@@ -103,7 +129,13 @@ class FasterRCNN_Weakly(FasterRCNN):
                     pdb.set_trace()
                 if not (cls_label.data.cpu().numpy().all() >= 0. and cls_label.data.cpu().numpy().all() <= 1.):
                     pdb.set_trace()
-                BCE_loss = F.binary_cross_entropy(max_roi_cls_prob, cls_label)
+
+                max_zero = torch.zeros_like(max_roi_cls_prob)
+                max_one = torch.ones_like(max_roi_cls_prob)
+                select_max = torch.where(
+                    max_roi_cls_prob > 0.2, max_one, max_zero)
+                BCE_loss = F.binary_cross_entropy(
+                    max_roi_cls_prob, cls_label)
                 return d_local, d_global, BCE_loss
             elif self.weakly_type == 'sum':
                 cls_score_t = cls_score.transpose(0, 1)
@@ -114,7 +146,13 @@ class FasterRCNN_Weakly(FasterRCNN):
                 weighted_prob_sum = weighted_prob.sum(0)
                 # To eliminate the error on bce loss at begining while some value >= 1
                 weighted_prob_sum = torch.clamp(weighted_prob_sum, 0, 1)
-                BCE_loss = F.binary_cross_entropy(weighted_prob_sum, cls_label)
+                #print(weighted_prob_sum.min(), weighted_prob_sum.max())
+                pdb.set_trace()
+                #print(cls_label.min(), cls_label.max())
+                print(weighted_prob_sum, cls_label)
+                BCE_loss = F.binary_cross_entropy(
+                    weighted_prob_sum, cls_label)
+                return d_local, d_global, BCE_loss
             elif self.weakly_type == 'rank':
                 BCE_loss = None
                 return d_local, d_global, BCE_loss

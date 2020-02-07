@@ -25,7 +25,7 @@ from model.rpn.bbox_transform import clip_boxes
 from model.nms.nms_wrapper import nms
 from model.rpn.bbox_transform import bbox_transform_inv
 from model.utils.net_utils import save_net, load_net, vis_detections
-from model.utils.parser_func import parse_args, set_dataset_args
+from model.utils.parser_func import parse_args, set_dataset_args, set_dataset_test_on_target_train
 from datasets.food_category import get_categories
 from model.faster_rcnn.vgg16_global_local import vgg16
 from model.faster_rcnn.resnet_global_local import resnet
@@ -36,6 +36,8 @@ from model.faster_rcnn.vgg16_global_local_weakly_sum import vgg16_weakly_sum
 from model.faster_rcnn.resnet_global_local_unreversed import resnet_local_unreversed
 from model.faster_rcnn.vgg16_multiscale import vgg16_multiscale
 from model.faster_rcnn.faster_rcnn_global_local_backbone import FasterRCNN
+from model.faster_rcnn.faster_rcnn_weakly_backbone import FasterRCNN_Weakly
+from datasets.id2name import id2chn, id2eng
 import cv2
 import pdb
 
@@ -59,9 +61,12 @@ if __name__ == '__main__':
     # set dataset : public dataset or food
 
     # public dataset
-    args = set_dataset_args(args, test=True)
+    #args = set_dataset_args(args, test=True)
+    args = set_dataset_test_on_target_train(args)
 
-    test_canteen = args.imdbval_name.split('_')[1]
+    test_dataset = args.imdbval_name
+
+    test_canteen = test_dataset.split('_')[1]
 
     args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]',
                      'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
@@ -82,7 +87,7 @@ if __name__ == '__main__':
 
     cfg.TRAIN.USE_FLIPPED = False
     imdb, roidb, ratio_list, ratio_index = combined_roidb(
-        args.imdbval_name, False)
+        test_dataset, False)
     imdb.competition_mode(on=True)
 
     print('{:d} roidb entries'.format(len(roidb)))
@@ -131,8 +136,11 @@ if __name__ == '__main__':
     #    print("network is not defined")
     #    pdb.set_trace()
 
-    fasterRCNN = FasterRCNN(imdb.classes, class_agnostic=args.class_agnostic,
-                            lc=args.lc, gc=args.gc, backbone_type='res101')
+    fasterRCNN = FasterRCNN_Weakly(imdb.classes,
+                                   class_agnostic=args.class_agnostic,
+                                   lc=args.lc, gc=args.gc,
+                                   backbone_type='res101',
+                                   weakly_type=args.weakly_type)
     fasterRCNN.create_architecture()
 
     print("load checkpoint %s" % (args.load_name))
@@ -285,7 +293,9 @@ if __name__ == '__main__':
                     cls_dets = cls_dets[keep.view(-1).long()]
                     if vis:
                         im2show = vis_detections(
-                            im2show, imdb.classes[j], np.array(cls_dets.cpu().numpy()), 0.5, [255, 0, 0])
+                            im2show, id2eng[imdb.classes[j]],
+                            np.array(cls_dets.cpu().numpy()), 0.5, [255, 0, 0],
+                            is_show_text=True)
 
                     all_boxes[j][i] = cls_dets.cpu().numpy()
                 else:
@@ -337,16 +347,21 @@ if __name__ == '__main__':
                 except:
                     pdb.set_trace()
 
-                save_vis_root_path = './savevis/{}/{}/{}_{}_{}/'.format(args.net, args.imdbval_name,
+                save_vis_root_path = './savevis/{}/{}/{}_{}_{}/'.format(args.net, test_dataset,
                                                                         args.checksession, args.checkepoch, args.checkpoint)
 
                 # show ground-truth
                 for gt_b in gt_boxes_cpu:
+                    try:
+                        # out of range
+                        show_cls_name = id2eng[imdb.classes[int(gt_b[-1])]]
+                    except:
+                        show_cls_name = 'Unknow'
                     im2show = vis_detections(
-                        im2show, imdb.classes[int(gt_b[-1])], gt_b[np.newaxis, :], 0.1, (0, 255, 0), False)
+                        im2show, show_cls_name, gt_b[np.newaxis, :], 0.1, (0, 255, 0), True)
 
                 i_row, i_c, _ = im2show.shape
-                im2show = cv2.resize(im2show, (int(i_c/2), int(i_row/2)))
+                #im2show = cv2.resize(im2show, (int(i_c/2), int(i_row/2)))
 
                 # save all
                 save_vis_path = save_vis_root_path + \
@@ -359,30 +374,32 @@ if __name__ == '__main__':
                 # save by condition
                 # 1.gt未检测到
                 # 2. gt类别错误(TODO)
-                for gt_b in gt_boxes_cpu:
-                    gt_cls_idx = int(gt_b[4])
-                    # 1 && 2
-                    if len(boxes_of_i[gt_cls_idx]) == 0:
-                        save_vis_path = save_vis_root_path + \
-                            'FN/' + imdb.classes[int(gt_cls_idx)]
-                        if not os.path.exists(save_vis_path):
-                            os.makedirs(save_vis_path)
-                        # im2vis_analysis = vis_detections(
-                        #    im2show, imdb.classes[int(gt_b[-1])], gt_b[np.newaxis,:], 0.1, (204, 0, 0))
-                        cv2.imwrite(os.path.join(save_vis_path,
-                                                 imdb.image_index[i]+'.jpg'), im2show)
 
-                gt_classes = [int(_[-1]) for _ in gt_boxes_cpu]
-                # 3. FP
-                for bi, det_b_cls in enumerate(boxes_of_i):
-                    if len(det_b_cls) > 0 and any(det_b_cls[:, 4] > 0.5):
-                        if bi not in gt_classes:
+                if False:
+                    for gt_b in gt_boxes_cpu:
+                        gt_cls_idx = int(gt_b[4])
+                        # 1 && 2
+                        if len(boxes_of_i[gt_cls_idx]) == 0:
                             save_vis_path = save_vis_root_path + \
-                                'FP/' + str(imdb.classes[bi])
+                                'FN/' + imdb.classes[int(gt_cls_idx)]
                             if not os.path.exists(save_vis_path):
                                 os.makedirs(save_vis_path)
+                            # im2vis_analysis = vis_detections(
+                            #    im2show, imdb.classes[int(gt_b[-1])], gt_b[np.newaxis,:], 0.1, (204, 0, 0))
                             cv2.imwrite(os.path.join(save_vis_path,
                                                      imdb.image_index[i]+'.jpg'), im2show)
+
+                    gt_classes = [int(_[-1]) for _ in gt_boxes_cpu]
+                    # 3. FP
+                    for bi, det_b_cls in enumerate(boxes_of_i):
+                        if len(det_b_cls) > 0 and any(det_b_cls[:, 4] > 0.5):
+                            if bi not in gt_classes:
+                                save_vis_path = save_vis_root_path + \
+                                    'FP/' + str(imdb.classes[bi])
+                                if not os.path.exists(save_vis_path):
+                                    os.makedirs(save_vis_path)
+                                cv2.imwrite(os.path.join(save_vis_path,
+                                                         imdb.image_index[i]+'.jpg'), im2show)
 
         with open(det_file, 'wb') as f:
             pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)

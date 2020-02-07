@@ -80,7 +80,6 @@ if __name__ == '__main__':
     settings(args)
 
     output_dir = args.save_dir + "/" + args.net + "/" + args.dataset
-    pdb.set_trace()
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
@@ -252,8 +251,10 @@ if __name__ == '__main__':
                 im_data.data.resize_(data_t[0].size()).copy_(data_t[0])
                 im_info.data.resize_(data_t[1].size()).copy_(data_t[1])
                 # gt is empty
-                gt_boxes.data.resize_(1, 1, 5).zero_()
-                num_boxes.data.resize_(1).zero_()
+                gt_boxes.data.resize_(data_t[2].size()).copy_(data_t[2])
+                num_boxes.data.resize_(data_t[3].size()).copy_(data_t[3])
+                #gt_boxes.data.resize_(1, 1, 5).zero_()
+                # num_boxes.data.resize_(1).zero_()
                 out_d_pixel, out_d, bce_loss = fasterRCNN(
                     im_data, im_info, gt_boxes, num_boxes, target=True)
                 # domain label

@@ -325,7 +325,7 @@ def clip_gradient(model, clip_norm):
             p.grad.mul_(norm)
 
 
-def vis_detections(im, class_name, dets, thresh=0.1, color=(233, 174, 61), is_show_text=True):
+def vis_detections(im, class_name, dets, thresh=0.1, color=(233, 174, 61), is_show_text=False):
     # color  BGR
     """Visual debugging of detections."""
     for i in range(np.minimum(10, dets.shape[0])):
@@ -340,11 +340,11 @@ def vis_detections(im, class_name, dets, thresh=0.1, color=(233, 174, 61), is_sh
             if is_show_text:
                 cv2.putText(im, '%s: %.2f' %
                             (class_name, score), (bbox[0], bbox[1] +
-                                                  15), cv2.FONT_HERSHEY_PLAIN, 3.0, (0, 0, 255), thickness=1)
+                                                  15), cv2.FONT_HERSHEY_PLAIN, 3.0, textColor, thickness=1)
     return im
 
 
-def cv2ImgAddText(img, text, left, top, textColor=(0, 0, 255), textSize=140):
+def cv2ImgAddText(img, text, left, top, textColor=(0, 0, 255), textSize=20):
     # GRB
     if (isinstance(img, np.ndarray)):  # 判断是否OpenCV图片类型
         img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))

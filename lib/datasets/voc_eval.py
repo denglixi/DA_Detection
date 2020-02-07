@@ -225,6 +225,8 @@ def rec_pre_eval_for_image_topk_back(all_boxes,
                                      k):
 
     imagenames, recs = get_gt_recs(cachedir, imagesetfile, annopath)
+    import pdb
+    pdb.set_trace()
 
     recall_all = []
     accuracy_all = []

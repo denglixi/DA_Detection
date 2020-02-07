@@ -4,7 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import torchvision.models as models
-from torch.autograd import Variable
 import numpy as np
 from model.utils.config import cfg
 from model.rpn.rpn import _RPN
@@ -112,9 +111,9 @@ class FasterRCNN(nn.Module):
             feat_pixel = None
         return d_pixel, feat_pixel
 
-    def forward_region_proposal(self, rois, gt_boxes, num_boxes):
+    def forward_region_proposal(self, rois, gt_boxes, num_boxes, force_test_mode=False):
         # if it is training phrase, then use ground trubut bboxes for refining
-        if self.training:
+        if self.training and not force_test_mode:
             roi_data = self.RCNN_proposal_target(rois, gt_boxes, num_boxes)
             rois, rois_label, rois_target, rois_inside_ws, rois_outside_ws = roi_data
 
@@ -165,8 +164,8 @@ class FasterRCNN(nn.Module):
             # compute bbox offset
         return pooled_feat
 
-    def bbox_pred_norm(self, bbox_pred, rois_label):
-        if self.training and not self.class_agnostic:
+    def bbox_pred_norm(self, bbox_pred, rois_label, force_test_mode=False):
+        if self.training and not self.class_agnostic and not force_test_mode:
             bbox_pred_view = bbox_pred.view(
                 bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
             bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.view(

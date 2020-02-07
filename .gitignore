@@ -13,6 +13,7 @@ test/
 local_unreversed/
 case_study/
 res*
+weakly*
 
 # READ THIS BEFORE YOU REFACTOR ME
 #
