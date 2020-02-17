@@ -12,8 +12,8 @@ no_cross/
 test/
 local_unreversed/
 case_study/
-res*
-weakly*
+res*/
+weakly*/
 
 # READ THIS BEFORE YOU REFACTOR ME
 #

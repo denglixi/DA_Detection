@@ -8,6 +8,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+
 import os
 import numpy as np
 import pprint
@@ -15,18 +16,16 @@ import pdb
 import time
 import _init_paths
 
-
-import torch
 from torch.autograd import Variable
 import torch.nn as nn
+import torch
+
 from roi_data_layer.roidb import combined_roidb
 from roi_data_layer.roibatchLoader import roibatchLoader
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.utils.net_utils import weights_normal_init, save_net, load_net, \
     adjust_learning_rate, save_checkpoint, clip_gradient, FocalLoss, sampler, calc_supp, EFocalLoss
-
 from model.utils.parser_func import parse_args, set_dataset_args
-
 from model.faster_rcnn.faster_rcnn_weakly_backbone import FasterRCNN_Weakly
 
 # def set_imdb_args(args):

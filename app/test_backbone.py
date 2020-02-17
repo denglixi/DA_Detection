@@ -61,8 +61,8 @@ if __name__ == '__main__':
     # set dataset : public dataset or food
 
     # public dataset
-    #args = set_dataset_args(args, test=True)
-    args = set_dataset_test_on_target_train(args)
+    args = set_dataset_args(args, test=True)
+    #args = set_dataset_test_on_target_train(args)
 
     test_dataset = args.imdbval_name
 
