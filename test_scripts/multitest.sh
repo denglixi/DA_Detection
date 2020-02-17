@@ -20,7 +20,7 @@ IMGSET=test
 #DATASET=foodexclUTownmt10_testUTownfew1
 
 #NET=foodres50_hierarchy_casecade_add_prob_0.5 #{foodres50, res101, vgg16}
-NET=prefood
+NET=res101
 # load weight
 
 # YIH 11545 #UTown 11407 #All 14819 #arts 13349 #science 13667
@@ -42,15 +42,15 @@ SAVE_FOR_VIS=
 sessionlist="5"
 for sess in $sessionlist
 do
-for i in `seq  19 1 19`
+for i in `seq  1 1 19`
 do
 
     EPOCH=$i
     SESSION=$sess
-    LOAD_NAME=../models/prefood/foodexclSciencemt10/globallocal_target_foodScience_eta_0.1_local_context_True_global_context_True_gamma_5_session_1_epoch_${EPOCH}_step_9999.pth
+    LOAD_NAME=./weakly_max_3/res101/foodexclArtsmt10/globallocal_target_foodArts_eta_0.1_local_context_False_global_context_False_gamma_5_session_1_epoch_${EPOCH}_step_9999.pth
     CUDA_VISIBLE_DEVICES=$1 python ./app/test_net_global_local.py --cuda --net $NET --dataset $DATASET --load_name $LOAD_NAME \
-        --lc  \
-        --test_cache
+        #--lc  \
+        #--test_cache
 
     #if $IS_VIS ;then
     #    CUDA_VISIBLE_DEVICES=$GPU_ID python test_net.py --dataset $DATASET --net $NET --imgset $IMGSET \

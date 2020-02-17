@@ -113,6 +113,7 @@ class FasterRCNN_Weakly(FasterRCNN):
                 max_roi_cls_prob, cls_label)
             print(BCE_loss)
 
+            pdb.set_trace()
         if self.training and target:
             if self.weakly_type == 'max':
                 #     c1 c2 c3

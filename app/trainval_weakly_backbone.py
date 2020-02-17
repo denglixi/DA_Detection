@@ -104,6 +104,7 @@ if __name__ == '__main__':
                                                batch_size=args.batch_size,
                                                sampler=sampler_batch,
                                                num_workers=args.num_workers)
+
     dataset_t = roibatchLoader(roidb_t, ratio_list_t,
                                ratio_index_t, args.batch_size,
                                imdb.num_classes, training=True)
@@ -111,6 +112,15 @@ if __name__ == '__main__':
                                                batch_size=args.batch_size,
                                                sampler=sampler_batch_t,
                                                num_workers=args.num_workers)
+
+    # dataset_t = roibatchLoader(roidb_t, ratio_list_t,
+    #                           ratio_index_t, args.batch_size,
+    #                           imdb.num_classes, training=False, normalize=False, path_return=True)
+    # dataloader_t = torch.utils.data.DataLoader(dataset_t,
+    #                                           batch_size=1,
+    #                                           shuffle=False,
+    #                                           num_workers=args.num_workers)
+
     # initilize the tensor holder here.
     im_data = torch.FloatTensor(1)
     im_info = torch.FloatTensor(1)
