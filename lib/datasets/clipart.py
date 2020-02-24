@@ -400,7 +400,8 @@ class clipart(imdb):
 
     def evaluate_detections(self, all_boxes, output_dir):
         self._write_voc_results_file(all_boxes)
-        self._do_python_eval(output_dir)
+        result = self._do_python_eval(output_dir)
+        pdb.set_trace()
         if self.config['matlab_eval']:
             self._do_matlab_eval(output_dir)
         if self.config['cleanup']:
@@ -409,6 +410,7 @@ class clipart(imdb):
                     continue
                 filename = self._get_voc_results_file_template().format(cls)
                 os.remove(filename)
+        return result
 
     def competition_mode(self, on):
         if on:

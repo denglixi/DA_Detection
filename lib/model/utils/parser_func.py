@@ -89,7 +89,13 @@ def parse_args():
     parser.add_argument('--bce_alpha', dest='bce_alpha',
                         help='trade-off parameter between detection loss and weakly detection loss. Used for weakly cross domain detection',
                         default=1, type=float)
-    parser.add_argument('--train_domain_loss', dest='train_domain_loss',
+    parser.add_argument('--train_target_domain', dest='train_target_domain',
+                        help='whether add the domain loss for training',
+                        action='store_true')
+    parser.add_argument('--train_uda_loss', dest='train_uda_loss',
+                        help='whether add the domain loss for training',
+                        action='store_true')
+    parser.add_argument('--train_wda_loss', dest='train_wda_loss',
                         help='whether add the domain loss for training',
                         action='store_true')
     parser.add_argument('--lr_decay_step', dest='lr_decay_step',
@@ -303,8 +309,8 @@ def set_dataset_args(args, test=False):
             args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES',
                              '20']
         elif args.dataset == "clipart":
-            args.imdb_name = "clipart_trainval"
-            args.imdbval_name = "clipart_trainval"
+            args.imdb_name = "clipart_test"
+            args.imdbval_name = "clipart_test"
             args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES',
                              '20']
         elif args.dataset == "cityscape_car":

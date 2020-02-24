@@ -389,6 +389,8 @@ if __name__ == '__main__':
 
     print('Evaluating detections')
     # evaluate mAP
+    import pdb
+    pdb.set_trace()
     cls_ap_zip, dataset_mAP = imdb.evaluate_detections(
         all_boxes, output_dir)
     cls_ap = list(cls_ap_zip)

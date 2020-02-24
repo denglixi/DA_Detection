@@ -1,14 +1,18 @@
 #!/bin/sh
 NW=8
 #{ foodexclArtsmt10 }
-#DATASET=foodexclArtsmt10
-#DATASET_T=foodArtsmt10
+DATASET=foodexclArtsmt10
+DATASET_T=foodArtsmt10
 
-DATASET=foodexclUTownmt10
-DATASET_T=foodUTownmt10
+#DATASET=foodexclUTownmt10
+#DATASET_T=foodUTownmt10
 
 #trainval_net_no_cross
 #trainval_net_global_local
+
+#DATASET=pascal_voc_0712
+#DATASET_T=clipart
+
 
 RESUME=True
 #
@@ -26,8 +30,8 @@ CUDA_VISIBLE_DEVICES=$1 python ./app/trainval_weakly_backbone.py --cuda --net re
    --nw $NW \
    --bce_alpha $BCE \
    --lr_decay_step=$DECAY_SETP \
-   --train_domain_loss \
    --weakly_type max \
+   --train_wda_loss \
    #--r $RESUME --load_name $LOAD_NAME \
    #--epochs
    #--fixed_layer=4 \

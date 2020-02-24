@@ -242,7 +242,8 @@ if __name__ == '__main__':
             loss_temp += loss.item()
 
             # target iteration and domain loss
-            if args.train_domain_loss:
+            # if args.train_target_domain:
+            if args.train_uda_loss or args.train_wda_loss:
                 # domain label
                 domain_s = Variable(torch.zeros(out_d.size(0)).long().cuda())
                 # global alignment loss
@@ -276,8 +277,11 @@ if __name__ == '__main__':
                     loss += (dloss_s + dloss_t +
                              dloss_s_p + dloss_t_p) * args.eta
                 else:
-                    loss += (dloss_s + dloss_t + dloss_s_p + dloss_t_p)  # * 10
-                    loss += bce_loss * args.bce_alpha
+                    if args.train_uda_loss:
+                        loss += (dloss_s + dloss_t +
+                                 dloss_s_p + dloss_t_p)  # * 10
+                    if args.train_wda_loss:
+                        loss += bce_loss * args.bce_alpha
 
             optimizer.zero_grad()
             loss.backward()
@@ -300,7 +304,7 @@ if __name__ == '__main__':
                     loss_rpn_box = rpn_loss_box.item()
                     loss_rcnn_cls = RCNN_loss_cls.item()
                     loss_rcnn_box = RCNN_loss_bbox.item()
-                    if args.train_domain_loss:
+                    if args.train_uda_loss:
                         dloss_s = dloss_s.item()
                         dloss_t = dloss_t.item()
                         dloss_s_p = dloss_s_p.item()
@@ -313,15 +317,16 @@ if __name__ == '__main__':
                 print("\t\t\tfg/bg=(%d/%d), time cost: %f" %
                       (fg_cnt, bg_cnt, end - start))
 
-                if args.train_domain_loss:
-                    print(
-                        "\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f dloss s: %.4f dloss t: %.4f dloss s pixel: %.4f dloss t pixel: %.4f eta: %.4f bce: %.4f"
-                        % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, dloss_s, dloss_t, dloss_s_p, dloss_t_p,
-                           args.eta, bce_loss))
-                else:
-                    print(
-                        "\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f "
-                        % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box))
+                output_str = "\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f ".format(
+                    loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box)
+
+                if args.train_uda_loss:
+                    output_str += "dloss s: %.4f dloss t: %.4f dloss s pixel: %.4f dloss t pixel: %.4f eta: %.4f ".format(
+                        dloss_s, dloss_t, dloss_s_p, dloss_t_p,
+                       args.eta)
+                elif args.train_wda_loss:
+                    output_str += "bce: %.4f" % (bce_loss)
+                print(output_str)
                 if args.use_tfboard:
                     info = {
                         'loss': loss_temp,
