@@ -27,6 +27,7 @@ from model.utils.net_utils import weights_normal_init, save_net, load_net, \
     adjust_learning_rate, save_checkpoint, clip_gradient, FocalLoss, sampler, calc_supp, EFocalLoss
 from model.utils.parser_func import parse_args, set_dataset_args
 from model.faster_rcnn.faster_rcnn_weakly_backbone import FasterRCNN_Weakly
+from model.faster_rcnn.faster_rcnn_weakly_multiscale_backbone import FasterRCNN_MultiWeakly
 
 # def set_imdb_args(args):
 #    args.imdb_name = args.dataset + '_trainmt10'
@@ -144,7 +145,7 @@ if __name__ == '__main__':
 
     # initilize the network here.
 
-    fasterRCNN = FasterRCNN_Weakly(imdb.classes,
+    fasterRCNN = FasterRCNN_MultiWeakly(imdb.classes,
                                    class_agnostic=args.class_agnostic,
                                    lc=args.lc, gc=args.gc,
                                    backbone_type='res101',
@@ -265,7 +266,7 @@ if __name__ == '__main__':
                 num_boxes.data.resize_(data_t[3].size()).copy_(data_t[3])
                 #gt_boxes.data.resize_(1, 1, 5).zero_()
                 # num_boxes.data.resize_(1).zero_()
-                out_d_pixel, out_d, bce_loss = fasterRCNN(
+                out_d_pixel, out_d, img_bce_loss, bce_loss = fasterRCNN(
                     im_data, im_info, gt_boxes, num_boxes, target=True)
                 # domain label
                 domain_t = Variable(torch.ones(out_d.size(0)).long().cuda())
@@ -282,6 +283,7 @@ if __name__ == '__main__':
                                  dloss_s_p + dloss_t_p)  # * 10
                     if args.train_wda_loss:
                         loss += bce_loss * args.bce_alpha
+                        loss += img_bce_loss * args.bce_alpha
 
             optimizer.zero_grad()
             loss.backward()
@@ -326,6 +328,7 @@ if __name__ == '__main__':
                        args.eta)
                 elif args.train_wda_loss:
                     output_str += "bce: %.4f" % (bce_loss)
+                    output_str += "img bce: %.4f" % (img_bce_loss)
                 print(output_str)
                 if args.use_tfboard:
                     info = {

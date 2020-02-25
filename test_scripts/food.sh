@@ -2,14 +2,14 @@
 
 # test collected canteen
 #DATASET=foodUTownmt10
-#DATASET=foodArtsmt10
+DATASET=foodArtsmt10
 
 
 # test excl canteen
 #DATASET=foodexclArts
 #DATASET=foodexclUTown
 
-DATASET=clipart
+#DATASET=clipart
 
 # NET=prefood #{res101, prefood, res101_local_unreversed}
 NET=res101

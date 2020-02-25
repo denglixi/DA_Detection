@@ -382,6 +382,7 @@ class clipart(imdb):
         print('Recompute with `./tools/reval.py --matlab ...` for your paper.')
         print('-- Thanks, The Management')
         print('--------------------------------------------------------------')
+        return zip(self._classes[1:], aps), np.mean(aps)
 
     def _do_matlab_eval(self, output_dir='output'):
         print('-----------------------------------------------------')
@@ -401,7 +402,6 @@ class clipart(imdb):
     def evaluate_detections(self, all_boxes, output_dir):
         self._write_voc_results_file(all_boxes)
         result = self._do_python_eval(output_dir)
-        pdb.set_trace()
         if self.config['matlab_eval']:
             self._do_matlab_eval(output_dir)
         if self.config['cleanup']:
