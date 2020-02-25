@@ -95,8 +95,11 @@ def parse_args():
     parser.add_argument('--train_uda_loss', dest='train_uda_loss',
                         help='whether add the domain loss for training',
                         action='store_true')
-    parser.add_argument('--train_wda_loss', dest='train_wda_loss',
-                        help='whether add the domain loss for training',
+    parser.add_argument('--train_img_wda_loss', dest='train_img_wda_loss',
+                        help='whether add the image-level weakly domain loss for training',
+                        action='store_true')
+    parser.add_argument('--train_region_wda_loss', dest='train_region_wda_loss',
+                        help='whether add the region-level domain loss for training',
                         action='store_true')
     parser.add_argument('--lr_decay_step', dest='lr_decay_step',
                         help='step to do learning rate decay, unit is epoch',

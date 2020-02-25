@@ -52,11 +52,16 @@ class image_weakly_moudle(nn.Module):
 
 
 class FasterRCNN_MultiWeakly(FasterRCNN):
-    def __init__(self, classes, class_agnostic, lc, gc, backbone_type='res101', pretrained=False, weakly_type='max'):
+    def __init__(self, classes, class_agnostic, lc, gc, backbone_type='res101',
+                 pretrained=False, weakly_type='max',
+                 is_uda=False, is_img_wda=True, is_region_wda=True):
         super(FasterRCNN_MultiWeakly, self).__init__(
             classes, class_agnostic, lc, gc, backbone_type, pretrained)
         self.weakly_type = weakly_type
         self.image_weakly = image_weakly_moudle(1024, len(self.classes))
+        self.is_uda = is_uda
+        self.is_img_wda = is_img_wda
+        self.is_region_wda = is_region_wda
 
     def forward(self, im_data, im_info, gt_boxes, num_boxes, target=False,  eta=1.0):
         DEBUG = False
@@ -83,18 +88,29 @@ class FasterRCNN_MultiWeakly(FasterRCNN):
 
         # feed image data to base model to obtain base feature map
         base_feat1 = self.RCNN_base1(im_data)
-        d_local, d_local_context = self.foward_local_domain_cls(
-            base_feat1, eta, target)
+        if self.is_uda:
+            d_local, d_local_context = self.foward_local_domain_cls(
+                base_feat1, eta, target)
+        else:
+            d_local = None
+            d_local_context = None
 
         base_feat = self.RCNN_base2(base_feat1)
-        d_global, d_global_context = self.foward_global_domain_cls(
+        if self.is_uda:
+            d_global, d_global_context = self.foward_global_domain_cls(
             base_feat, eta, target)
+        else:
+            d_global = None
+            d_global_context = None
 
 
         if self.training and target or DEBUG:
-            image_multi_cls_score = self.image_weakly(base_feat).squeeze()
-            img_BCE_loss = F.binary_cross_entropy(
-                F.sigmoid(image_multi_cls_score), cls_label)
+            if self.is_img_wda:
+                image_multi_cls_score = self.image_weakly(base_feat).squeeze()
+                img_BCE_loss = F.binary_cross_entropy(
+                    F.sigmoid(image_multi_cls_score), cls_label)
+            else:
+                img_BCE_loss = None
 
         # feed base feature map tp RPN to obtain rois
         # ignore gt_box of  target
@@ -114,8 +130,9 @@ class FasterRCNN_MultiWeakly(FasterRCNN):
         pooled_feat = self.RCNN_top(pooled_feat).mean(3).mean(2)
 
         # add context based on gc and lc hyperparameter
-        pooled_feat = self.forward_add_context(
-            d_local_context, d_global_context, pooled_feat)
+        if self.is_uda:
+            pooled_feat = self.forward_add_context(
+                d_local_context, d_global_context, pooled_feat)
 
         # compute bbox offset
         bbox_pred = self.RCNN_bbox_pred(pooled_feat)
@@ -139,52 +156,53 @@ class FasterRCNN_MultiWeakly(FasterRCNN):
             BCE_loss = F.binary_cross_entropy(
                 max_roi_cls_prob, cls_label)
             print(BCE_loss)
-
             pdb.set_trace()
+
+        # weakly region-level domain adapatation
         if self.training and target:
-            if self.weakly_type == 'max':
-                #     c1 c2 c3
-                # b1   1
-                # b2
-                # b3
-                #cls_prob_sum = torch.sum(cls_prob, 0)
-                # x = max(1, x)
-                #cls_prob_sum = cls_prob_sum.repeat(2, 1)
-                #cls_prob_sum = torch.min(cls_prob_sum, 0)[0]
-                max_roi_cls_prob = torch.max(cls_prob, 0)[0]
-                #assert (max_roi_cls_prob.data.cpu().numpy().all() >= 0. and max_roi_cls_prob.data.cpu().numpy().all() <= 1.)
-                if not (max_roi_cls_prob.data.cpu().numpy().all() >= 0. and max_roi_cls_prob.data.cpu().numpy().all() <= 1.):
-                    pdb.set_trace()
-                if not (cls_label.data.cpu().numpy().all() >= 0. and cls_label.data.cpu().numpy().all() <= 1.):
-                    pdb.set_trace()
+            if self.is_region_wda:
+                if self.weakly_type == 'max':
+                    #     c1 c2 c3
+                    # b1   1
+                    # b2
+                    # b3
+                    #cls_prob_sum = torch.sum(cls_prob, 0)
+                    # x = max(1, x)
+                    #cls_prob_sum = cls_prob_sum.repeat(2, 1)
+                    #cls_prob_sum = torch.min(cls_prob_sum, 0)[0]
+                    max_roi_cls_prob = torch.max(cls_prob, 0)[0]
+                    #assert (max_roi_cls_prob.data.cpu().numpy().all() >= 0. and max_roi_cls_prob.data.cpu().numpy().all() <= 1.)
+                    if not (max_roi_cls_prob.data.cpu().numpy().all() >= 0. and max_roi_cls_prob.data.cpu().numpy().all() <= 1.):
+                        pdb.set_trace()
+                    if not (cls_label.data.cpu().numpy().all() >= 0. and cls_label.data.cpu().numpy().all() <= 1.):
+                        pdb.set_trace()
 
-                max_zero = torch.zeros_like(max_roi_cls_prob)
-                max_one = torch.ones_like(max_roi_cls_prob)
-                select_max = torch.where(
-                    max_roi_cls_prob > 0.2, max_one, max_zero)
-                BCE_loss = F.binary_cross_entropy(
-                    max_roi_cls_prob, cls_label)
-                return d_local, d_global, img_BCE_loss, BCE_loss
-            elif self.weakly_type == 'sum':
-                cls_score_t = cls_score.transpose(0, 1)
-                weight_of_roi_in_each_cls = F.softmax(cls_score_t, 1)
-                weight_of_roi_in_each_cls = weight_of_roi_in_each_cls.transpose(
-                    0, 1)
-                weighted_prob = torch.mul(cls_prob, weight_of_roi_in_each_cls)
-                weighted_prob_sum = weighted_prob.sum(0)
-                # To eliminate the error on bce loss at begining while some value >= 1
-                weighted_prob_sum = torch.clamp(weighted_prob_sum, 0, 1)
-                #print(weighted_prob_sum.min(), weighted_prob_sum.max())
-                pdb.set_trace()
-                #print(cls_label.min(), cls_label.max())
-                print(weighted_prob_sum, cls_label)
-                BCE_loss = F.binary_cross_entropy(
-                    weighted_prob_sum, cls_label)
-                return d_local, d_global, BCE_loss
-            elif self.weakly_type == 'rank':
+                    max_zero = torch.zeros_like(max_roi_cls_prob)
+                    max_one = torch.ones_like(max_roi_cls_prob)
+                    select_max = torch.where(
+                        max_roi_cls_prob > 0.2, max_one, max_zero)
+                    BCE_loss = F.binary_cross_entropy(
+                        max_roi_cls_prob, cls_label)
+                elif self.weakly_type == 'sum':
+                    cls_score_t = cls_score.transpose(0, 1)
+                    weight_of_roi_in_each_cls = F.softmax(cls_score_t, 1)
+                    weight_of_roi_in_each_cls = weight_of_roi_in_each_cls.transpose(
+                        0, 1)
+                    weighted_prob = torch.mul(cls_prob, weight_of_roi_in_each_cls)
+                    weighted_prob_sum = weighted_prob.sum(0)
+                    # To eliminate the error on bce loss at begining while some value >= 1
+                    weighted_prob_sum = torch.clamp(weighted_prob_sum, 0, 1)
+                    #print(weighted_prob_sum.min(), weighted_prob_sum.max())
+                    pdb.set_trace()
+                    #print(cls_label.min(), cls_label.max())
+                    print(weighted_prob_sum, cls_label)
+                    BCE_loss = F.binary_cross_entropy(
+                        weighted_prob_sum, cls_label)
+                elif self.weakly_type == 'rank':
+                    BCE_loss = None
+            else:
                 BCE_loss = None
-                return d_local, d_global, BCE_loss
-
+            return d_local, d_global, img_BCE_loss, BCE_loss
         RCNN_loss_cls = 0
         RCNN_loss_bbox = 0
 

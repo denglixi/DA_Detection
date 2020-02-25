@@ -31,7 +31,8 @@ CUDA_VISIBLE_DEVICES=$1 python ./app/trainval_weakly_backbone.py --cuda --net re
    --bce_alpha $BCE \
    --lr_decay_step=$DECAY_SETP \
    --weakly_type max \
-   --train_wda_loss \
+   --train_img_wda_loss \
+   #--train_region_wda_loss \
    #--r $RESUME --load_name $LOAD_NAME \
    #--epochs
    #--fixed_layer=4 \
