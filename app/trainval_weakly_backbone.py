@@ -318,11 +318,11 @@ if __name__ == '__main__':
                 print("\t\t\tfg/bg=(%d/%d), time cost: %f" %
                       (fg_cnt, bg_cnt, end - start))
 
-                output_str = "\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f ".format(
+                output_str = "\t\t\trpn_cls: {:.4f}, rpn_box: {:.4f}, rcnn_cls: {:.4f}, rcnn_box {:.4f} ".format(
                     loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box)
 
                 if args.train_uda_loss:
-                    output_str += "dloss s: %.4f dloss t: %.4f dloss s pixel: %.4f dloss t pixel: %.4f eta: %.4f ".format(
+                    output_str += "dloss s: {:.4f} dloss t: {:.4f} dloss s pixel: {:.4f} dloss t pixel: {:.4f} eta: {:.4f} ".format(
                         dloss_s, dloss_t, dloss_s_p, dloss_t_p,
                        args.eta)
                 if args.train_region_wda_loss:
