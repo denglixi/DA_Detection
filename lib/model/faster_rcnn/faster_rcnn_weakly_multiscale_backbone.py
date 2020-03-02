@@ -183,6 +183,15 @@ class FasterRCNN_MultiWeakly(FasterRCNN):
                         max_roi_cls_prob > 0.2, max_one, max_zero)
                     BCE_loss = F.binary_cross_entropy(
                         max_roi_cls_prob, cls_label)
+                elif self.weakly_type == 'select_max':
+                    #max_roi_cls_prob = torch.max(cls_prob, 0)[0]
+                    selected_rois_index =  torch.argmax(cls_prob, 0)
+                    selected_rois_index = torch.unique(selected_rois_index.cpu()).cuda()
+                    selected_rois_score = cls_prob[selected_rois_index]
+                    sum_selected_rois_score = torch.sum(selected_rois_score, 0)
+                    sum_selected_rois_score = torch.clamp(sum_selected_rois_score, 0, 1)
+                    BCE_loss = F.binary_cross_entropy(
+                        sum_selected_rois_score, cls_label)
                 elif self.weakly_type == 'sum':
                     cls_score_t = cls_score.transpose(0, 1)
                     weight_of_roi_in_each_cls = F.softmax(cls_score_t, 1)

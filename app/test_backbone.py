@@ -433,6 +433,7 @@ if __name__ == '__main__':
         print(map_exist_cls)
     else:
         print(cls_ap_zip, dataset_mAP)
+        map_exist_cls = dataset_mAP
 
     save_record_file_path = "/".join(args.load_name.split('/')[:-1])
     load_model_name = args.load_name.split('/')[-1]

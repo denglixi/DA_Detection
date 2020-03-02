@@ -12,9 +12,9 @@ GPU_ID=1
 #DATASET=foodexclArtsmt10_testArtsfew1
 
 
-#DATASET=foodArtsmt10
+DATASET=foodArtsmt10
 
-DATASET=clipart
+#DATASET=clipart
 IMGSET=test
 
 #DATASET=foodexclUTownmt10
@@ -43,13 +43,14 @@ SAVE_FOR_VIS=
 sessionlist="5"
 for sess in $sessionlist
 do
-for i in `seq  1 1 19`
+for i in `seq  9 1 19`
 do
 
     EPOCH=$i
     SESSION=$sess
-    LOAD_NAME=./wda_max_3/res101/pascal_voc_0712/globallocal_target_clipart_eta_0.1_local_context_False_global_context_False_gamma_5_session_1_epoch_${EPOCH}_step_9999.pth
-    CUDA_VISIBLE_DEVICES=$1 python ./app/test_net_global_local.py --cuda --net $NET --dataset $DATASET --load_name $LOAD_NAME \
+    #LOAD_NAME=./img_wda_3/res101/pascal_voc_0712/globallocal_target_clipart_eta_0.1_local_context_False_global_context_False_gamma_5_session_1_epoch_${EPOCH}_step_9999.pth
+    LOAD_NAME=./img_wda_3/res101/foodexclArtsmt10/globallocal_target_foodArtsmt10_eta_0.1_local_context_False_global_context_False_gamma_5_session_1_epoch_${EPOCH}_step_9999.pth
+    CUDA_VISIBLE_DEVICES=$1 python ./app/test_backbone.py --cuda --net $NET --dataset $DATASET --load_name $LOAD_NAME \
         #--lc  \
         #--test_cache
 
