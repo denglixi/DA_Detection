@@ -22,21 +22,12 @@ from roi_data_layer.roidb import combined_roidb
 from roi_data_layer.roibatchLoader import roibatchLoader
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.rpn.bbox_transform import clip_boxes
-from model.nms.nms_wrapper import nms
+from model.roi_layers import nms
 from model.rpn.bbox_transform import bbox_transform_inv
 from model.utils.net_utils import save_net, load_net, vis_detections
 from model.utils.parser_func import parse_args, set_dataset_args, set_dataset_test_on_target_train
 from datasets.food_category import get_categories
-from model.faster_rcnn.vgg16_global_local import vgg16
-from model.faster_rcnn.resnet_global_local import resnet
-from model.faster_rcnn.prefood_res50_attention import PreResNet50Attention
-from model.faster_rcnn.vgg16_global_local_weakly import vgg16_weakly
-from model.faster_rcnn.resnet_global_local_weakly import resnet_weakly
-from model.faster_rcnn.vgg16_global_local_weakly_sum import vgg16_weakly_sum
-from model.faster_rcnn.resnet_global_local_unreversed import resnet_local_unreversed
-from model.faster_rcnn.vgg16_multiscale import vgg16_multiscale
-from model.faster_rcnn.faster_rcnn_global_local_backbone import FasterRCNN
-from model.faster_rcnn.faster_rcnn_weakly_backbone import FasterRCNN_Weakly
+from model.faster_rcnn.faster_rcnn_weakly_multiscale_backbone import FasterRCNN_MultiWeakly
 from datasets.id2name import id2chn, id2eng
 import cv2
 import pdb
@@ -92,55 +83,15 @@ if __name__ == '__main__':
 
     print('{:d} roidb entries'.format(len(roidb)))
 
-    # initilize the network here.
-
-    # if args.net == 'vgg16':
-    #    fasterRCNN = vgg16(imdb.classes, pretrained=True,
-    #                       class_agnostic=args.class_agnostic, lc=args.lc, gc=args.gc)
-
-    # elif args.net == 'vgg16_multiscale':
-    #    fasterRCNN = vgg16_multiscale(imdb.classes, pretrained=False,
-    #                                  class_agnostic=args.class_agnostic,
-    #                                  lc=args.lc,
-    #                                  gc=args.gc)
-
-    # elif args.net == 'res101':
-    #    fasterRCNN = resnet(imdb.classes, 101, pretrained=True,
-    #                        class_agnostic=args.class_agnostic, lc=args.lc, gc=args.gc)
-
-    # elif args.net == 'res101_local_unreversed':
-    #    fasterRCNN = resnet_local_unreversed(imdb.classes, 101, pretrained=True,
-    #                                         class_agnostic=args.class_agnostic,
-    #                                         lc=args.lc, gc=args.gc)
-
-    # elif args.net == 'prefood':
-    #    fasterRCNN = PreResNet50Attention(imdb.classes,  pretrained=True,
-    #                                      class_agnostic=args.class_agnostic,
-    #                                      lc=args.lc, gc=args.gc)
-
-    # elif args.net == 'vgg16_weakly':
-    #    fasterRCNN = vgg16_weakly(imdb.classes, pretrained=True,
-    #                              class_agnostic=args.class_agnostic,
-    #                              lc=args.lc,
-    #                              gc=args.gc)
-
-    # elif args.net == 'vgg16_weakly_sum':
-    #    fasterRCNN = vgg16_weakly_sum(imdb.classes, pretrained=True,
-    #                                  class_agnostic=args.class_agnostic,
-    #                                  lc=args.lc,
-    #                                  gc=args.gc)
-
-    # elif args.net == 'res50':
-    #  fasterRCNN = resnet(imdb.classes, 50, pretrained=True, class_agnostic=args.class_agnostic,context=args.context)
-    # else:
-    #    print("network is not defined")
-    #    pdb.set_trace()
-
-    fasterRCNN = FasterRCNN_Weakly(imdb.classes,
+    fasterRCNN = FasterRCNN_MultiWeakly(imdb.classes,
                                    class_agnostic=args.class_agnostic,
                                    lc=args.lc, gc=args.gc,
                                    backbone_type='res101',
-                                   weakly_type=args.weakly_type)
+                                   pretrained=True,
+                                   weakly_type=args.weakly_type,
+                                   is_uda=args.train_uda_loss,
+                                   is_img_wda=args.train_img_wda_loss,
+                                   is_region_wda=args.train_region_wda_loss)
     fasterRCNN.create_architecture()
 
     print("load checkpoint %s" % (args.load_name))
@@ -164,10 +115,10 @@ if __name__ == '__main__':
         gt_boxes = gt_boxes.cuda()
 
     # make variable
-    im_data = Variable(im_data)
-    im_info = Variable(im_info)
-    num_boxes = Variable(num_boxes)
-    gt_boxes = Variable(gt_boxes)
+    #im_data = Variable(im_data)
+    #im_info = Variable(im_info)
+    #num_boxes = Variable(num_boxes)
+    #gt_boxes = Variable(gt_boxes)
 
     if args.cuda:
         cfg.CUDA = True
@@ -206,10 +157,11 @@ if __name__ == '__main__':
         for i in range(num_images):
 
             data = next(data_iter)
-            im_data.data.resize_(data[0].size()).copy_(data[0])
-            im_info.data.resize_(data[1].size()).copy_(data[1])
-            gt_boxes.data.resize_(data[2].size()).copy_(data[2])
-            num_boxes.data.resize_(data[3].size()).copy_(data[3])
+            with torch.no_grad():
+                im_data.resize_(data[0].size()).copy_(data[0])
+                im_info.resize_(data[1].size()).copy_(data[1])
+                gt_boxes.resize_(data[2].size()).copy_(data[2])
+                num_boxes.resize_(data[3].size()).copy_(data[3])
 
             det_tic = time.time()
             fasterRCNN_result = fasterRCNN(
@@ -219,7 +171,7 @@ if __name__ == '__main__':
                 rois, cls_prob, bbox_pred, \
                     rpn_loss_cls, rpn_loss_box, \
                     RCNN_loss_cls, RCNN_loss_bbox, \
-                    rois_label, d_pred, _ = fasterRCNN_result
+                    rois_label, _ , _ = fasterRCNN_result
             if len(fasterRCNN_result) == 9:
                 # normal global or local model
                 rois, cls_prob, bbox_pred, \
@@ -235,7 +187,6 @@ if __name__ == '__main__':
 
             scores = cls_prob.data
             boxes = rois.data[:, :, 1:5]
-            d_pred = d_pred.data
             path = data[4]
 
             if cfg.TEST.BBOX_REG:
@@ -289,7 +240,7 @@ if __name__ == '__main__':
                         (cls_boxes, cls_scores.unsqueeze(1)), 1)
                     # cls_dets = torch.cat((cls_boxes, cls_scores), 1)
                     cls_dets = cls_dets[order]
-                    keep = nms(cls_dets, cfg.TEST.NMS)
+                    keep = nms(cls_boxes[order, :], cls_scores[order], cfg.TEST.NMS)
                     cls_dets = cls_dets[keep.view(-1).long()]
                     if vis:
                         im2show = vis_detections(

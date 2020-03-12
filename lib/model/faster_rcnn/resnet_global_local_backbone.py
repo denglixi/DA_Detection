@@ -4,15 +4,12 @@ from __future__ import print_function
 
 from model.utils.config import cfg
 
-from model.faster_rcnn.faster_rcnn_global_local import _fasterRCNN
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
-import math
 import torch.utils.model_zoo as model_zoo
-import pdb
+
+import math
 
 from model.faster_rcnn.global_local_domain_classifier import conv3x3, conv1x1, netD_pixel, netD_dc
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',

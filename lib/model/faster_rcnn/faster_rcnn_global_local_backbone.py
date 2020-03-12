@@ -7,9 +7,7 @@ import torchvision.models as models
 import numpy as np
 from model.utils.config import cfg
 from model.rpn.rpn import _RPN
-from model.roi_pooling.modules.roi_pool import _RoIPooling
-from model.roi_crop.modules.roi_crop import _RoICrop
-from model.roi_align.modules.roi_align import RoIAlignAvg
+from model.roi_layers import ROIAlign, ROIPool
 from model.rpn.proposal_target_layer_cascade import _ProposalTargetLayer
 import time
 import pdb
@@ -56,14 +54,10 @@ class FasterRCNN(nn.Module):
         # define rpn
         self.RCNN_rpn = _RPN(self.dout_base_model)
         self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
-        self.RCNN_roi_pool = _RoIPooling(
-            cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
-        self.RCNN_roi_align = RoIAlignAvg(
-            cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
-
-        self.grid_size = cfg.POOLING_SIZE * \
-            2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
-        self.RCNN_roi_crop = _RoICrop()
+        self.RCNN_roi_pool = ROIPool(
+            (cfg.POOLING_SIZE, cfg.POOLING_SIZE), 1.0/16.0)
+        self.RCNN_roi_align = ROIAlign(
+            (cfg.POOLING_SIZE, cfg.POOLING_SIZE), 1.0/16.0, 0)
 
         # define RCNN pred
         feat_d = 2048
@@ -134,18 +128,7 @@ class FasterRCNN(nn.Module):
 
     def forward_roi_pooling(self, rois, base_feat):
 
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(
-                rois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack(
-                [grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
-            pooled_feat = self.RCNN_roi_crop(
-                base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                pooled_feat = F.max_pool2d(pooled_feat, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
+        if cfg.POOLING_MODE == 'align':
             pooled_feat = self.RCNN_roi_align(base_feat, rois.view(-1, 5))
         elif cfg.POOLING_MODE == 'pool':
             pooled_feat = self.RCNN_roi_pool(base_feat, rois.view(-1, 5))
@@ -172,6 +155,7 @@ class FasterRCNN(nn.Module):
                 rois_label.size(0), 1, 1).expand(rois_label.size(0), 1, 4))
             bbox_pred = bbox_pred_select.squeeze(1)
         return bbox_pred
+
 
     def forward(self, im_data, im_info, gt_boxes, num_boxes, target=False, eta=1.0):
         batch_size = im_data.size(0)

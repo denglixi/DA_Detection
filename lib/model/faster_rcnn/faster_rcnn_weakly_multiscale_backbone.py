@@ -19,9 +19,6 @@ from torch.autograd import Variable
 import numpy as np
 from model.utils.config import cfg
 from model.rpn.rpn import _RPN
-from model.roi_pooling.modules.roi_pool import _RoIPooling
-from model.roi_crop.modules.roi_crop import _RoICrop
-from model.roi_align.modules.roi_align import RoIAlignAvg
 from model.rpn.proposal_target_layer_cascade import _ProposalTargetLayer
 import time
 import pdb
@@ -146,11 +143,21 @@ class FasterRCNN_MultiWeakly(FasterRCNN):
         # for test only
 
         if DEBUG:
-            max_roi_cls_prob = torch.max(cls_prob, 0)[0]
-            max_zero = torch.zeros_like(max_roi_cls_prob)
-            max_one = torch.ones_like(max_roi_cls_prob)
-
-            select_max = torch.where(max_roi_cls_prob > 0.2, max_one, max_zero)
+            DEBUG_weakly_type = 'max'
+            if DEBUG_weakly_type == 'max':
+                max_roi_cls_prob = torch.max(cls_prob, 0)[0]
+                max_zero = torch.zeros_like(max_roi_cls_prob)
+                max_one = torch.ones_like(max_roi_cls_prob)
+                select_max = torch.where(max_roi_cls_prob > 0.2, max_one, max_zero)
+            else:
+                selected_rois_index =  torch.argmax(cls_score, 0)
+                selected_rois_index = torch.unique(selected_rois_index.cpu()).cuda()
+                selected_rois_score = cls_score[selected_rois_index]
+                sum_selected_rois_score = torch.sum(selected_rois_score, 0)
+                sum_selected_rois_prob = F.sigmoid(sum_selected_rois_score)
+                max_zero = torch.zeros_like(sum_selected_rois_score)
+                max_one = torch.ones_like(sum_selected_rois_score)
+                select_max = torch.where(max_roi_cls_prob > 0.2, max_one, max_zero)
             print(select_max)
             print(cls_label)
             BCE_loss = F.binary_cross_entropy(
@@ -159,38 +166,25 @@ class FasterRCNN_MultiWeakly(FasterRCNN):
             pdb.set_trace()
 
         # weakly region-level domain adapatation
-        if self.training and target:
+        if self.training and target or DEBUG:
             if self.is_region_wda:
                 if self.weakly_type == 'max':
-                    #     c1 c2 c3
-                    # b1   1
-                    # b2
-                    # b3
-                    #cls_prob_sum = torch.sum(cls_prob, 0)
-                    # x = max(1, x)
-                    #cls_prob_sum = cls_prob_sum.repeat(2, 1)
-                    #cls_prob_sum = torch.min(cls_prob_sum, 0)[0]
                     max_roi_cls_prob = torch.max(cls_prob, 0)[0]
-                    #assert (max_roi_cls_prob.data.cpu().numpy().all() >= 0. and max_roi_cls_prob.data.cpu().numpy().all() <= 1.)
-                    if not (max_roi_cls_prob.data.cpu().numpy().all() >= 0. and max_roi_cls_prob.data.cpu().numpy().all() <= 1.):
-                        pdb.set_trace()
-                    if not (cls_label.data.cpu().numpy().all() >= 0. and cls_label.data.cpu().numpy().all() <= 1.):
-                        pdb.set_trace()
-
-                    max_zero = torch.zeros_like(max_roi_cls_prob)
-                    max_one = torch.ones_like(max_roi_cls_prob)
-                    select_max = torch.where(
-                        max_roi_cls_prob > 0.2, max_one, max_zero)
                     BCE_loss = F.binary_cross_entropy(
                         max_roi_cls_prob, cls_label)
                 elif self.weakly_type == 'select_max':
                     #max_roi_cls_prob = torch.max(cls_prob, 0)[0]
-                    selected_rois_index =  torch.argmax(cls_prob, 0)
+                    selected_rois_index =  torch.argmax(cls_score, 0)
                     selected_rois_index = torch.unique(selected_rois_index.cpu()).cuda()
-                    selected_rois_score = cls_prob[selected_rois_index]
+                    selected_rois_score = cls_score[selected_rois_index]
                     sum_selected_rois_score = torch.sum(selected_rois_score, 0)
-                    sum_selected_rois_score = torch.clamp(sum_selected_rois_score, 0, 1)
-                    BCE_loss = F.binary_cross_entropy(
+                    #sum_selected_rois_score = torch.clamp(sum_selected_rois_score, 0., 1.)
+                    #sum_selected_rois_score = torch.clamp(sum_selected_rois_score, 0.00000001, 0.9999999999)
+                    #if not ((sum_selected_rois_score.data.cpu().numpy() >= 0.).all() and (sum_selected_rois_score.data.cpu().numpy() <= 1.).all()):
+                    #    pdb.set_trace()
+                    #if not ((cls_label.data.cpu().numpy() >= 0.).all() and (cls_label.data.cpu().numpy() <= 1.).all()):
+                    #    pdb.set_trace()
+                    BCE_loss = F.binary_cross_entropy_with_logits(
                         sum_selected_rois_score, cls_label)
                 elif self.weakly_type == 'sum':
                     cls_score_t = cls_score.transpose(0, 1)

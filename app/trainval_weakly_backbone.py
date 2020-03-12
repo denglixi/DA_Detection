@@ -19,6 +19,7 @@ import _init_paths
 from torch.autograd import Variable
 import torch.nn as nn
 import torch
+from torch import autograd
 
 from roi_data_layer.roidb import combined_roidb
 from roi_data_layer.roibatchLoader import roibatchLoader
@@ -176,18 +177,23 @@ if __name__ == '__main__':
     if args.resume:
         print("loading checkpoint %s" % (args.load_name))
         checkpoint = torch.load(args.load_name)
-        args.session = checkpoint['session']
-        args.start_epoch = checkpoint['epoch']
         fasterRCNN.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        lr = optimizer.param_groups[0]['lr']
-        if 'pooling_mode' in checkpoint.keys():
-            cfg.POOLING_MODE = checkpoint['pooling_mode']
+        fine_tune = True
+        if fine_tune:
+            print("fine_tune...")
+        else:
+            print("resuming....")
+            args.session = checkpoint['session']
+            args.start_epoch = checkpoint['epoch']
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            lr = optimizer.param_groups[0]['lr']
+            if 'pooling_mode' in checkpoint.keys():
+                cfg.POOLING_MODE = checkpoint['pooling_mode']
         print("loaded checkpoint %s" % (args.load_name))
 
     if args.mGPUs:
         fasterRCNN = nn.DataParallel(fasterRCNN)
-    iters_per_epoch = int(10000 / args.batch_size)
+    iters_per_epoch = int(args.checkpoint_interval / args.batch_size)
     if args.ef:
         FL = EFocalLoss(class_num=2, gamma=args.gamma)
     else:
@@ -207,8 +213,15 @@ if __name__ == '__main__':
             adjust_learning_rate(optimizer, args.lr_decay_gamma)
             lr *= args.lr_decay_gamma
 
+        train_on_target = True
+        if train_on_target:
+            dataloader_s = dataloader_t
+
         data_iter_s = iter(dataloader_s)
         data_iter_t = iter(dataloader_t)
+
+
+
         for step in range(iters_per_epoch):
 
             # each step: one source iteration and one target iteration
@@ -222,10 +235,11 @@ if __name__ == '__main__':
             # eta = 1.0
             count_iter += 1
             # put source data into variable
-            im_data.data.resize_(data_s[0].size()).copy_(data_s[0])
-            im_info.data.resize_(data_s[1].size()).copy_(data_s[1])
-            gt_boxes.data.resize_(data_s[2].size()).copy_(data_s[2])
-            num_boxes.data.resize_(data_s[3].size()).copy_(data_s[3])
+            with torch.no_grad():
+                im_data.resize_(data_s[0].size()).copy_(data_s[0])
+                im_info.resize_(data_s[1].size()).copy_(data_s[1])
+                gt_boxes.resize_(data_s[2].size()).copy_(data_s[2])
+                num_boxes.resize_(data_s[3].size()).copy_(data_s[3])
 
             fasterRCNN.zero_grad()
             rois, cls_prob, bbox_pred, \
@@ -249,14 +263,15 @@ if __name__ == '__main__':
                     data_iter_t = iter(dataloader_t)
                     data_t = next(data_iter_t)
 
-                # put target data into variable
-                im_data.data.resize_(data_t[0].size()).copy_(data_t[0])
-                im_info.data.resize_(data_t[1].size()).copy_(data_t[1])
-                # gt is empty
-                gt_boxes.data.resize_(data_t[2].size()).copy_(data_t[2])
-                num_boxes.data.resize_(data_t[3].size()).copy_(data_t[3])
-                #gt_boxes.data.resize_(1, 1, 5).zero_()
-                # num_boxes.data.resize_(1).zero_()
+                with torch.no_grad():
+                    # put target data into variable
+                    im_data.resize_(data_t[0].size()).copy_(data_t[0])
+                    im_info.resize_(data_t[1].size()).copy_(data_t[1])
+                    # gt is empty
+                    gt_boxes.resize_(data_t[2].size()).copy_(data_t[2])
+                    num_boxes.resize_(data_t[3].size()).copy_(data_t[3])
+                    #gt_boxes.data.resize_(1, 1, 5).zero_()
+                    # num_boxes.data.resize_(1).zero_()
                 out_d_pixel, out_d, img_bce_loss, region_bce_loss = fasterRCNN(
                     im_data, im_info, gt_boxes, num_boxes, target=True)
 
@@ -285,7 +300,8 @@ if __name__ == '__main__':
                     loss += region_bce_loss * args.bce_alpha
 
             optimizer.zero_grad()
-            loss.backward()
+            with autograd.detect_anomaly():
+                loss.backward()
             optimizer.step()
 
             if step % args.disp_interval == 0:
