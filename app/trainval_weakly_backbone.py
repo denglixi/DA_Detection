@@ -80,7 +80,7 @@ if __name__ == '__main__':
     set_args(args)
     settings(args)
 
-    output_dir = args.save_dir + "/" + args.net + "/" + args.dataset
+    output_dir = 'CheckPoints/' + args.save_dir + "/" + args.net + "/" + args.dataset
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
