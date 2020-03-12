@@ -7,6 +7,12 @@ DATASET_T=foodArtsmt10
 #DATASET=foodexclUTownmt10
 #DATASET_T=foodUTownmt10
 
+DATASET=foodexclYIHmt10
+DATASET_T=foodYIHmt10
+
+DATASET=foodexclSciencemt10
+DATASET_T=foodSciencemt10
+
 #trainval_net_no_cross
 #trainval_net_global_local
 
@@ -18,7 +24,7 @@ RESUME=True
 #
 LOAD_NAME='./weakly_max_1/res101/foodexclArtsmt10/globallocal_target_foodArts_eta_0.1_local_context_False_global_context_False_gamma_5_session_1_epoch_14_step_9999.pth'
 
-DECAY_SETP=3
+DECAY_SETP=5
 BCE=3
 #--epochs
 
@@ -31,8 +37,8 @@ CUDA_VISIBLE_DEVICES=$1 python ./app/trainval_weakly_backbone.py --cuda --net re
    --bce_alpha $BCE \
    --lr_decay_step=$DECAY_SETP \
    --weakly_type max \
-   --train_img_wda_loss \
-   #--train_region_wda_loss \
+   --train_region_wda_loss \
+   #--train_img_wda_loss \
    #--r $RESUME --load_name $LOAD_NAME \
    #--epochs
    #--fixed_layer=4 \

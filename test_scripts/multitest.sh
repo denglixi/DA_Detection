@@ -48,7 +48,10 @@ do
 
     EPOCH=$i
     SESSION=$sess
-    LOAD_NAME=./wda_max_3/res101/pascal_voc_0712/globallocal_target_clipart_eta_0.1_local_context_False_global_context_False_gamma_5_session_1_epoch_${EPOCH}_step_9999.pth
+    #LOAD_NAME=./wda_max_3/res101/pascal_voc_0712/globallocal_target_clipart_eta_0.1_local_context_False_global_context_False_gamma_5_session_1_epoch_${EPOCH}_step_9999.pth
+    #LOAD_NAME=./multiweakly_max_3/res101/foodexclArtsmt10/globallocal_target_foodArtsmt10_eta_0.1_local_context_False_global_context_False_gamma_5_session_1_epoch_${EPOCH}_step_9999.pth
+    #LOAD_NAME=./non_weakly/res101/foodexclArtsmt10/globallocal_target_foodArtsmt10_eta_0.1_local_context_False_global_context_False_gamma_5_session_1_epoch_${EPOCH}_step_9999.pth
+    LOAD_NAME=./non_weakly/res101/pascal_voc_0712/globallocal_target_clipart_eta_0.1_local_context_False_global_context_False_gamma_5_session_1_epoch_${EPOCH}_step_9999.pth
     CUDA_VISIBLE_DEVICES=$1 python ./app/test_net_global_local.py --cuda --net $NET --dataset $DATASET --load_name $LOAD_NAME \
         #--lc  \
         #--test_cache

@@ -421,21 +421,45 @@ if __name__ == '__main__':
     else:
         val_categories = get_categories("{}".format(test_canteen)+"_"+"inner")
     map_exist_cls = []
-    if val_categories is not None:
-        for cls, ap in cls_ap:
-            if cls in val_categories:
-                if np.isnan(ap):
-                    continue
-                else:
-                    map_exist_cls.append(ap)
-                    print(cls, ap)
-        map_exist_cls = sum(map_exist_cls) / len(map_exist_cls)
-        print(map_exist_cls)
-    else:
-        print(cls_ap_zip, dataset_mAP)
 
     save_record_file_path = "/".join(args.load_name.split('/')[:-1])
     load_model_name = args.load_name.split('/')[-1]
+    with open(save_record_file_path + '/record_categroy.txt', 'w') as f:
+        cls_chn_str = ""
+        ap_str =""
+        cls_eng_str = ""
+        if val_categories is not None:
+            for cls, ap in cls_ap:
+                if cls in val_categories:
+                    if np.isnan(ap):
+                        continue
+                    else:
+                        map_exist_cls.append(ap)
+                        cls_chn_str += id2chn[cls].replace('&', '')
+                        cls_chn_str += '&'
+                        cls_eng_str += id2eng[cls].replace('&', '')
+                        cls_eng_str +=  '&'
+                        ap_str += '{:.2f}'.format(ap * 100)
+                        ap_str += '&'
+                        print(cls, ap)
+                        f.write(id2eng[cls].replace('&', '') +  '&' + '{:.2f}'.format(ap * 100) + '\\\\\n')
+
+            map_exist_cls = sum(map_exist_cls) / len(map_exist_cls)
+            print(map_exist_cls)
+            #f.write(cls_chn_str + '\n' + cls_eng_str +   '\n' + ap_str)
+        else:
+            cls_str = ""
+            for cls, ap in cls_ap:
+                cls_str += cls.replace('&','')
+                cls_str += '&'
+                ap_str += '{:.2f}'.format(ap * 100)
+                ap_str += '&'
+            print(cls_ap_zip, dataset_mAP)
+            f.write(cls_str + '\n' + ap_str)
+
+
+
     with open(save_record_file_path + '/record.txt', 'a') as f:
         f.write(str(load_model_name) + '\t')
         f.write(str(map_exist_cls) + '\n')
+
