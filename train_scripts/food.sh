@@ -1,8 +1,8 @@
 #!/bin/sh
 NW=8
 #{ foodexclArtsmt10 }
-DATASET=foodexclArtsmt10
-DATASET_T=foodArtsmt10
+#DATASET=foodexclArtsmt10
+#DATASET_T=foodArtsmt10
 
 #DATASET=foodexclUTownmt10
 #DATASET_T=foodUTownmt10
@@ -16,8 +16,8 @@ DATASET_T=foodSciencemt10
 #trainval_net_no_cross
 #trainval_net_global_local
 
-#DATASET=pascal_voc_0712
-#DATASET_T=clipart
+DATASET=pascal_voc_0712
+DATASET_T=clipart
 
 
 RESUME=True
