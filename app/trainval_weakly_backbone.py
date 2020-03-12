@@ -98,13 +98,16 @@ if __name__ == '__main__':
     sampler_batch = sampler(train_size, args.batch_size)
     sampler_batch_t = sampler(train_size_t, args.batch_size)
 
-    dataset_s = roibatchLoader(roidb, ratio_list, ratio_index, args.batch_size,
-                               imdb.num_classes, training=True)
-
-    dataloader_s = torch.utils.data.DataLoader(dataset_s,
-                                               batch_size=args.batch_size,
-                                               sampler=sampler_batch,
-                                               num_workers=args.num_workers)
+    if not args.fine_tune_on_target:
+        dataset_s = roibatchLoader(roidb, ratio_list, ratio_index, args.batch_size,
+                                imdb.num_classes, training=True)
+        dataloader_s = torch.utils.data.DataLoader(dataset_s,
+                                                batch_size=args.batch_size,
+                                                sampler=sampler_batch,
+                                                num_workers=args.num_workers)
+    else:
+        dataloader_s = None
+        print('fine tune on target dataset')
 
     dataset_t = roibatchLoader(roidb_t, ratio_list_t,
                                ratio_index_t, args.batch_size,
@@ -178,8 +181,9 @@ if __name__ == '__main__':
         print("loading checkpoint %s" % (args.load_name))
         checkpoint = torch.load(args.load_name)
         fasterRCNN.load_state_dict(checkpoint['model'])
-        fine_tune = True
-        if fine_tune:
+
+
+        if args.fine_tune_on_target:
             print("fine_tune...")
         else:
             print("resuming....")
@@ -213,8 +217,7 @@ if __name__ == '__main__':
             adjust_learning_rate(optimizer, args.lr_decay_gamma)
             lr *= args.lr_decay_gamma
 
-        train_on_target = True
-        if train_on_target:
+        if args.fine_tune_on_target:
             dataloader_s = dataloader_t
 
         data_iter_s = iter(dataloader_s)

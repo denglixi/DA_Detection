@@ -89,11 +89,11 @@ def parse_args():
     parser.add_argument('--bce_alpha', dest='bce_alpha',
                         help='trade-off parameter between detection loss and weakly detection loss. Used for weakly cross domain detection',
                         default=1, type=float)
-    parser.add_argument('--train_target_domain', dest='train_target_domain',
-                        help='whether add the domain loss for training',
+    parser.add_argument('--fine_tune_on_target', dest='fine_tune_on_target',
+                        help='whether only fine tune the model on target dataset with fully annotations',
                         action='store_true')
     parser.add_argument('--train_uda_loss', dest='train_uda_loss',
-                        help='whether add the domain loss for training',
+                        help='whether add the unsupervised domain loss for training',
                         action='store_true')
     parser.add_argument('--train_img_wda_loss', dest='train_img_wda_loss',
                         help='whether add the image-level weakly domain loss for training',

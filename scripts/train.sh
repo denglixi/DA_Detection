@@ -33,6 +33,7 @@ CUDA_VISIBLE_DEVICES=$1 python ./app/trainval_weakly_backbone.py --cuda --net re
    --weakly_type select_max \
    --checkpoint_interval 2000 \
    --r $RESUME --load_name $LOAD_NAME \
+   --fine_tune_on_target
 
    #--train_region_wda_loss \
    #--train_img_wda_loss \
