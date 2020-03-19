@@ -429,6 +429,7 @@ def get_data2imdb_dict(split='train', category_split='train'):
                     ct, ct_sp, ct, split, mtN)
             dataset = "food{}{}".format(ct, mtNstr)
             data2imdb_dict[dataset] = imdb_name
+            data2imdb_dict[dataset+'Fake'] = imdb_name+'Fake'
 
     # 2. trian on fine
     for ct in collected_cts:
