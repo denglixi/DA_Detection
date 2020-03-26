@@ -15,6 +15,7 @@ case_study/
 res*/
 weakly*/
 CheckPoints/
+*.nfs*
 
 # READ THIS BEFORE YOU REFACTOR ME
 #
