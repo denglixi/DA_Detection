@@ -10,6 +10,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
+import os
+
 from datasets.pascal_voc import pascal_voc
 from datasets.pascal_voc_water import pascal_voc_water
 from datasets.pascal_voc_cyclewater import pascal_voc_cyclewater
@@ -23,9 +26,9 @@ from datasets.cityscape_car import cityscape_car
 from datasets.foggy_cityscape import foggy_cityscape
 from datasets.food_data import food_merge_imdb
 
+from model.utils.config import cfg
 __sets = {}
 
-import numpy as np
 for split in ['train', 'trainval', 'val', 'test']:
     name = 'cityscape_{}'.format(split)
     __sets[name] = (lambda split=split: cityscape(split))
@@ -70,7 +73,6 @@ for year in ['2007']:
         __sets[name] = (lambda split=split: water(split, year))
 
 
-
 # Set up food_<canteen>_<split>_<trainingcategories>
 splits = ['train', 'val', 'trainval', 'inner', 'test']
 mt_splits = []
@@ -93,7 +95,8 @@ innerfew = []
 for sp in ['train', 'val']:
     for m in [10]:
         for few in [1, 5]:
-            innerfew.append('innermt{}{}few{}mt{}{}'.format(m, based_split, few, m, sp))
+            innerfew.append('innermt{}{}few{}mt{}{}'.format(
+                m, based_split, few, m, sp))
 splits += innerfew
 
 # take few sample in inner between dataset of canteen and dataset of excl canteen as training data. And regard the lefts as validation.
@@ -111,11 +114,18 @@ for cantee in ['exclYIH', "All", "exclArts", "exclUTown", "Science", "exclScienc
             name = 'food_{}_{}_{}'.format(cantee, split, category_train)
             __sets[name] = (lambda split=split,
                             cantee=cantee, category_train=category_train: food_merge_imdb(split, cantee, category_train))
+            __sets[name+'Fake'] = (lambda split=split,
+                                   cantee=cantee,
+                                   category_train=category_train: food_merge_imdb(split, cantee, category_train, devkit_path=os.path.join(cfg.DATA_DIR, 'FoodFake'), is_fake=True))
             for n in [10, 30, 50, 100]:
                 category_mt10 = category + '_train_mt{}'.format(n)
                 name = 'food_{}_{}_{}'.format(cantee, split, category_mt10)
                 __sets[name] = (lambda split=split,
                                 cantee=cantee, category_mt10=category_mt10: food_merge_imdb(split, cantee, category_mt10))
+                __sets[name+'Fake'] = (lambda split=split,
+                                   cantee=cantee,
+                                   category_mt10=category_mt10: food_merge_imdb(split, cantee, category_mt10, devkit_path=os.path.join(cfg.DATA_DIR, 'FoodFake'), is_fake=True))
+
 
 def get_imdb(name):
     """Get an imdb (image database) by name."""

@@ -44,11 +44,14 @@ except NameError:
 
 
 class food_merge_imdb(imdb):
-    def __init__(self, image_set, cantee, categories, devkit_path=None):
+    def __init__(self, image_set, cantee, categories, devkit_path=None, is_fake=False):
         """
         categories: All_trainval, exclYIH_trainval, ...
         """
-        imdb.__init__(self, 'food_' + cantee + '_' + image_set)
+        if is_fake:
+            imdb.__init__(self, 'food_' + cantee + '_' + image_set+ 'Fake')
+        else:
+            imdb.__init__(self, 'food_' + cantee + '_' + image_set)
         self._cantee = cantee
         self._image_set = image_set
         self._devkit_path = self._get_default_path() if devkit_path is None \
@@ -149,6 +152,8 @@ class food_merge_imdb(imdb):
                 roidb = pickle.load(fid)
             print('{} gt roidb loaded from {}'.format(self.name, cache_file))
             return roidb
+        self.widths = self._get_widths()
+        self.heights = self._get_heights()
 
         gt_roidb = [self._load_pascal_annotation(index)
                     for index in self.image_index]
@@ -229,6 +234,11 @@ class food_merge_imdb(imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
+        image_i = self._image_index.index(index)
+        width = self.widths[image_i]
+        height = self.heights[image_i]
+
+
         filename = os.path.join(self._data_path, 'Annotations', index + '.xml')
         tree = ET.parse(filename)
         objs = tree.findall('object')
@@ -272,8 +282,10 @@ class food_merge_imdb(imdb):
             # the range of food label is (0, width) which may cause by bugs in labelimg 1.4
             x1 = max(0.0, float(bbox.find('xmin').text) - 1)
             y1 = max(0.0, float(bbox.find('ymin').text) - 1)
-            x2 = float(bbox.find('xmax').text) - 1
-            y2 = float(bbox.find('ymax').text) - 1
+            #x2 = min(width, float(bbox.find('xmax').text) - 1)
+            #y2 = min(height, float(bbox.find('ymax').text) - 1)
+            x2 = min(width - 1, float(bbox.find('xmax').text) - 1)
+            y2 = min(height - 1, float(bbox.find('ymax').text) - 1)
 
             diffc = obj.find('difficult')
             difficult = 0 if diffc == None else int(diffc.text)

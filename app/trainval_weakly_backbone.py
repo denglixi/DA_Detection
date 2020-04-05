@@ -36,6 +36,8 @@ from model.faster_rcnn.faster_rcnn_weakly_multiscale_backbone import FasterRCNN_
 #    return args
 
 
+
+
 def set_args(args):
     args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]',
                      'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
@@ -55,6 +57,9 @@ def settings(args):
     print('Using config:')
     pprint.pprint(cfg)
     np.random.seed(cfg.RNG_SEED)
+    torch.manual_seed(cfg.RNG_SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     # torch.backends.cudnn.benchmark = True
     if torch.cuda.is_available() and not args.cuda:
@@ -87,6 +92,7 @@ if __name__ == '__main__':
     # source dataset
     imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
     train_size = len(roidb)
+
     # target dataset
     imdb_t, roidb_t, ratio_list_t, ratio_index_t = combined_roidb(
         args.imdb_name_target)
@@ -208,175 +214,176 @@ if __name__ == '__main__':
 
         logger = SummaryWriter("logs")
     count_iter = 0
-    for epoch in range(args.start_epoch, args.max_epochs + 1):
-        # setting to train mode
-        fasterRCNN.train()
-        loss_temp = 0
-        start = time.time()
-        if epoch % (args.lr_decay_step + 1) == 0:
-            adjust_learning_rate(optimizer, args.lr_decay_gamma)
-            lr *= args.lr_decay_gamma
+    with autograd.detect_anomaly():
+        for epoch in range(args.start_epoch, args.max_epochs + 1):
+            # setting to train mode
+            fasterRCNN.train()
+            loss_temp = 0
+            start = time.time()
+            if epoch % (args.lr_decay_step + 1) == 0:
+                adjust_learning_rate(optimizer, args.lr_decay_gamma)
+                lr *= args.lr_decay_gamma
 
-        if args.fine_tune_on_target:
-            dataloader_s = dataloader_t
+            if args.fine_tune_on_target:
+                dataloader_s = dataloader_t
 
-        data_iter_s = iter(dataloader_s)
-        data_iter_t = iter(dataloader_t)
-
-
-
-        for step in range(iters_per_epoch):
-
-            # each step: one source iteration and one target iteration
-            # source iteration
-            try:
-                data_s = next(data_iter_s)
-            except:
-                data_iter_s = iter(dataloader_s)
-                data_s = next(data_iter_s)
-
-            # eta = 1.0
-            count_iter += 1
-            # put source data into variable
-            with torch.no_grad():
-                im_data.resize_(data_s[0].size()).copy_(data_s[0])
-                im_info.resize_(data_s[1].size()).copy_(data_s[1])
-                gt_boxes.resize_(data_s[2].size()).copy_(data_s[2])
-                num_boxes.resize_(data_s[3].size()).copy_(data_s[3])
-
-            fasterRCNN.zero_grad()
-            rois, cls_prob, bbox_pred, \
-                rpn_loss_cls, rpn_loss_box, \
-                RCNN_loss_cls, RCNN_loss_bbox, \
-                rois_label, out_d_pixel_s, out_d_s = fasterRCNN(
-                    im_data, im_info, gt_boxes, num_boxes)
-            loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
-                + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
-            loss_temp += loss.item()
-
-            ############################################################
-            # target iteration and domain loss
-            ##########################################################
-            if args.train_uda_loss or args.train_img_wda_loss or args.train_region_wda_loss:
+            data_iter_s = iter(dataloader_s)
+            data_iter_t = iter(dataloader_t)
 
 
+
+            for step in range(iters_per_epoch):
+
+                # each step: one source iteration and one target iteration
+                # source iteration
                 try:
-                    data_t = next(data_iter_t)
+                    data_s = next(data_iter_s)
                 except:
-                    data_iter_t = iter(dataloader_t)
-                    data_t = next(data_iter_t)
+                    data_iter_s = iter(dataloader_s)
+                    data_s = next(data_iter_s)
 
+                # eta = 1.0
+                count_iter += 1
+                # put source data into variable
                 with torch.no_grad():
-                    # put target data into variable
-                    im_data.resize_(data_t[0].size()).copy_(data_t[0])
-                    im_info.resize_(data_t[1].size()).copy_(data_t[1])
-                    # gt is empty
-                    gt_boxes.resize_(data_t[2].size()).copy_(data_t[2])
-                    num_boxes.resize_(data_t[3].size()).copy_(data_t[3])
-                    #gt_boxes.data.resize_(1, 1, 5).zero_()
-                    # num_boxes.data.resize_(1).zero_()
-                out_d_pixel, out_d, img_bce_loss, region_bce_loss = fasterRCNN(
-                    im_data, im_info, gt_boxes, num_boxes, target=True)
+                    im_data.resize_(data_s[0].size()).copy_(data_s[0])
+                    im_info.resize_(data_s[1].size()).copy_(data_s[1])
+                    gt_boxes.resize_(data_s[2].size()).copy_(data_s[2])
+                    num_boxes.resize_(data_s[3].size()).copy_(data_s[3])
 
-                if args.train_uda_loss:
-                    # source domain label
-                    domain_s = Variable(torch.zeros(out_d_s.size(0)).long().cuda())
-                    # global alignment loss
-                    dloss_s = 0.5 * FL(out_d_s, domain_s)
-                    # local alignment loss
-                    dloss_s_p = 0.5 * torch.mean(out_d_pixel_s ** 2)
+                fasterRCNN.zero_grad()
+                rois, cls_prob, bbox_pred, \
+                    rpn_loss_cls, rpn_loss_box, \
+                    RCNN_loss_cls, RCNN_loss_bbox, \
+                    rois_label, out_d_pixel_s, out_d_s = fasterRCNN(
+                        im_data, im_info, gt_boxes, num_boxes)
+                loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
+                    + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
+                loss_temp += loss.item()
 
-                    # target domain label
-                    domain_t = Variable(torch.ones(out_d.size(0)).long().cuda())
-                    # global alignment loss
-                    dloss_t = 0.5 * FL(out_d, domain_t)
-                    # local alignment loss
-                    dloss_t_p = 0.5 * torch.mean((1 - out_d_pixel) ** 2)
-                    if args.dataset == 'sim10k':
-                        loss += (dloss_s + dloss_t +
-                                 dloss_s_p + dloss_t_p) * args.eta
-                    loss += (dloss_s + dloss_t +
-                                dloss_s_p + dloss_t_p)  # * 10
-                if args.train_img_wda_loss:
-                    loss += img_bce_loss * args.bce_alpha
-                if args.train_region_wda_loss:
-                    loss += region_bce_loss * args.bce_alpha
+                ############################################################
+                # target iteration and domain loss
+                ##########################################################
+                if args.train_uda_loss or args.train_img_wda_loss or args.train_region_wda_loss:
 
-            optimizer.zero_grad()
-            with autograd.detect_anomaly():
-                loss.backward()
-            optimizer.step()
 
-            if step % args.disp_interval == 0:
-                end = time.time()
-                if step > 0:
-                    loss_temp /= (args.disp_interval + 1)
+                    try:
+                        data_t = next(data_iter_t)
+                    except:
+                        data_iter_t = iter(dataloader_t)
+                        data_t = next(data_iter_t)
 
-                if args.mGPUs:
-                    loss_rpn_cls = rpn_loss_cls.mean().item()
-                    loss_rpn_box = rpn_loss_box.mean().item()
-                    loss_rcnn_cls = RCNN_loss_cls.mean().item()
-                    loss_rcnn_box = RCNN_loss_bbox.mean().item()
-                    fg_cnt = torch.sum(rois_label.data.ne(0))
-                    bg_cnt = rois_label.data.numel() - fg_cnt
-                else:
-                    loss_rpn_cls = rpn_loss_cls.item()
-                    loss_rpn_box = rpn_loss_box.item()
-                    loss_rcnn_cls = RCNN_loss_cls.item()
-                    loss_rcnn_box = RCNN_loss_bbox.item()
+                    with torch.no_grad():
+                        # put target data into variable
+                        im_data.resize_(data_t[0].size()).copy_(data_t[0])
+                        im_info.resize_(data_t[1].size()).copy_(data_t[1])
+                        # gt is empty
+                        gt_boxes.resize_(data_t[2].size()).copy_(data_t[2])
+                        num_boxes.resize_(data_t[3].size()).copy_(data_t[3])
+                        #gt_boxes.data.resize_(1, 1, 5).zero_()
+                        # num_boxes.data.resize_(1).zero_()
+                    out_d_pixel, out_d, img_bce_loss, region_bce_loss = fasterRCNN(
+                        im_data, im_info, gt_boxes, num_boxes, target=True)
+
                     if args.train_uda_loss:
-                        dloss_s = dloss_s.item()
-                        dloss_t = dloss_t.item()
-                        dloss_s_p = dloss_s_p.item()
-                        dloss_t_p = dloss_t_p.item()
-                    fg_cnt = torch.sum(rois_label.data.ne(0))
-                    bg_cnt = rois_label.data.numel() - fg_cnt
+                        # source domain label
+                        domain_s = Variable(torch.zeros(out_d_s.size(0)).long().cuda())
+                        # global alignment loss
+                        dloss_s = 0.5 * FL(out_d_s, domain_s)
+                        # local alignment loss
+                        dloss_s_p = 0.5 * torch.mean(out_d_pixel_s ** 2)
 
-                print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e"
-                      % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
-                print("\t\t\tfg/bg=(%d/%d), time cost: %f" %
-                      (fg_cnt, bg_cnt, end - start))
+                        # target domain label
+                        domain_t = Variable(torch.ones(out_d.size(0)).long().cuda())
+                        # global alignment loss
+                        dloss_t = 0.5 * FL(out_d, domain_t)
+                        # local alignment loss
+                        dloss_t_p = 0.5 * torch.mean((1 - out_d_pixel) ** 2)
+                        if args.dataset == 'sim10k':
+                            loss += (dloss_s + dloss_t +
+                                     dloss_s_p + dloss_t_p) * args.eta
+                        loss += (dloss_s + dloss_t +
+                                    dloss_s_p + dloss_t_p)  # * 10
+                    if args.train_img_wda_loss:
+                        loss += img_bce_loss * args.bce_alpha
+                    if args.train_region_wda_loss:
+                        loss += region_bce_loss * args.bce_alpha
 
-                output_str = "\t\t\trpn_cls: {:.4f}, rpn_box: {:.4f}, rcnn_cls: {:.4f}, rcnn_box {:.4f} ".format(
-                    loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box)
+                optimizer.zero_grad()
+                with autograd.detect_anomaly():
+                    loss.backward()
+                optimizer.step()
 
-                if args.train_uda_loss:
-                    output_str += "dloss s: {:.4f} dloss t: {:.4f} dloss s pixel: {:.4f} dloss t pixel: {:.4f} eta: {:.4f} ".format(
-                        dloss_s, dloss_t, dloss_s_p, dloss_t_p,
-                       args.eta)
-                if args.train_region_wda_loss:
-                    output_str += "bce: %.4f " % (region_bce_loss)
-                if args.train_img_wda_loss:
-                    output_str += "img bce: %.4f " % (img_bce_loss)
-                print(output_str)
-                if args.use_tfboard:
-                    info = {
-                        'loss': loss_temp,
-                        'loss_rpn_cls': loss_rpn_cls,
-                        'loss_rpn_box': loss_rpn_box,
-                        'loss_rcnn_cls': loss_rcnn_cls,
-                        'loss_rcnn_box': loss_rcnn_box
-                    }
-                    logger.add_scalars("logs_s_{}/losses".format(args.session), info,
-                                       (epoch - 1) * iters_per_epoch + step)
+                if step % args.disp_interval == 0:
+                    end = time.time()
+                    if step > 0:
+                        loss_temp /= (args.disp_interval + 1)
 
-                loss_temp = 0
-                start = time.time()
-        save_name = os.path.join(output_dir,
-                                 'globallocal_target_{}_eta_{}_local_context_{}_global_context_{}_gamma_{}_session_{}_epoch_{}_step_{}.pth'.format(
-                                     args.dataset_t, args.eta,
-                                     args.lc, args.gc, args.gamma,
-                                     args.session, epoch,
-                                     step))
-        save_checkpoint({
-            'session': args.session,
-            'epoch': epoch + 1,
-            'model': fasterRCNN.module.state_dict() if args.mGPUs else fasterRCNN.state_dict(),
-            'optimizer': optimizer.state_dict(),
-            'pooling_mode': cfg.POOLING_MODE,
-            'class_agnostic': args.class_agnostic,
-        }, save_name)
-        print('save model: {}'.format(save_name))
+                    if args.mGPUs:
+                        loss_rpn_cls = rpn_loss_cls.mean().item()
+                        loss_rpn_box = rpn_loss_box.mean().item()
+                        loss_rcnn_cls = RCNN_loss_cls.mean().item()
+                        loss_rcnn_box = RCNN_loss_bbox.mean().item()
+                        fg_cnt = torch.sum(rois_label.data.ne(0))
+                        bg_cnt = rois_label.data.numel() - fg_cnt
+                    else:
+                        loss_rpn_cls = rpn_loss_cls.item()
+                        loss_rpn_box = rpn_loss_box.item()
+                        loss_rcnn_cls = RCNN_loss_cls.item()
+                        loss_rcnn_box = RCNN_loss_bbox.item()
+                        if args.train_uda_loss:
+                            dloss_s = dloss_s.item()
+                            dloss_t = dloss_t.item()
+                            dloss_s_p = dloss_s_p.item()
+                            dloss_t_p = dloss_t_p.item()
+                        fg_cnt = torch.sum(rois_label.data.ne(0))
+                        bg_cnt = rois_label.data.numel() - fg_cnt
+
+                    print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e"
+                          % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
+                    print("\t\t\tfg/bg=(%d/%d), time cost: %f" %
+                          (fg_cnt, bg_cnt, end - start))
+
+                    output_str = "\t\t\trpn_cls: {:.4f}, rpn_box: {:.4f}, rcnn_cls: {:.4f}, rcnn_box {:.4f} ".format(
+                        loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box)
+
+                    if args.train_uda_loss:
+                        output_str += "dloss s: {:.4f} dloss t: {:.4f} dloss s pixel: {:.4f} dloss t pixel: {:.4f} eta: {:.4f} ".format(
+                            dloss_s, dloss_t, dloss_s_p, dloss_t_p,
+                           args.eta)
+                    if args.train_region_wda_loss:
+                        output_str += "bce: %.4f " % (region_bce_loss)
+                    if args.train_img_wda_loss:
+                        output_str += "img bce: %.4f " % (img_bce_loss)
+                    print(output_str)
+                    if args.use_tfboard:
+                        info = {
+                            'loss': loss_temp,
+                            'loss_rpn_cls': loss_rpn_cls,
+                            'loss_rpn_box': loss_rpn_box,
+                            'loss_rcnn_cls': loss_rcnn_cls,
+                            'loss_rcnn_box': loss_rcnn_box
+                        }
+                        logger.add_scalars("logs_s_{}/losses".format(args.session), info,
+                                           (epoch - 1) * iters_per_epoch + step)
+
+                    loss_temp = 0
+                    start = time.time()
+            save_name = os.path.join(output_dir,
+                                     'globallocal_target_{}_eta_{}_local_context_{}_global_context_{}_gamma_{}_session_{}_epoch_{}_step_{}.pth'.format(
+                                         args.dataset_t, args.eta,
+                                         args.lc, args.gc, args.gamma,
+                                         args.session, epoch,
+                                         step))
+            save_checkpoint({
+                'session': args.session,
+                'epoch': epoch + 1,
+                'model': fasterRCNN.module.state_dict() if args.mGPUs else fasterRCNN.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'pooling_mode': cfg.POOLING_MODE,
+                'class_agnostic': args.class_agnostic,
+            }, save_name)
+            print('save model: {}'.format(save_name))
 
     if args.use_tfboard:
         logger.close()

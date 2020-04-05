@@ -1,5 +1,5 @@
 #!/bin/sh
-NW=8
+NW=0
 #{ foodexclArtsmt10 }
 DATASET=foodexclArtsmt10
 DATASET_T=foodArtsmt10
@@ -22,7 +22,7 @@ DATASET_T=foodSciencemt10
 
 RESUME=True
 #
-LOAD_NAME='./selected_max_3/res101/foodexclArtsmt10/globallocal_target_foodArtsmt10_eta_0.1_local_context_False_global_context_False_gamma_5_session_1_epoch_12_step_9999.pth'
+LOAD_NAME='./CheckPoints/Ideal_finetune/res101/foodexclArtsmt10/globallocal_target_foodArtsmt10_eta_0.1_local_context_False_global_context_False_gamma_5_session_1_epoch_10_step_1999.pth'
 
 DECAY_SETP=5
 BCE=3
@@ -36,12 +36,11 @@ CUDA_VISIBLE_DEVICES=$1 python ./app/trainval_weakly_backbone.py --cuda --net re
    --nw $NW \
    --bce_alpha $BCE \
    --lr_decay_step=$DECAY_SETP \
-   --weakly_type select_max \
-   --checkpoint_interval 2000 \
-   --r $RESUME --load_name $LOAD_NAME \
-   --fine_tune_on_target
-
+   --weakly_type max \
+   --checkpoint_interval 10000 \
    #--train_region_wda_loss \
+   #--r $RESUME --load_name $LOAD_NAME \
+   #--fine_tune_on_target
    #--train_img_wda_loss \
    #--epochs
    #--fixed_layer=4 \

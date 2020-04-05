@@ -112,24 +112,45 @@ class imdb(object):
         return [PIL.Image.open(self.image_path_at(i)).size[0]
                 for i in range(self.num_images)]
 
+    def _get_heights(self):
+        return [PIL.Image.open(self.image_path_at(i)).size[1]
+                for i in range(self.num_images)]
+
     def append_flipped_images(self):
         num_images = self.num_images
         widths = self._get_widths()
+        heights = self._get_heights()
 
+        #import pdb
+        #pdb.set_trace()
         for i in range(num_images):
-            boxes = self.roidb[i]['boxes'].copy()
+            boxes = np.int32(self.roidb[i]['boxes'].copy())
             oldx1 = boxes[:, 0].copy()
             oldx2 = boxes[:, 2].copy()
-            boxes[:, 0] = widths[i] - oldx2 - 1
-            boxes[:, 2] = widths[i] - oldx1 - 1
+            oldy1 = boxes[:, 1].copy()
+            oldy2 = boxes[:, 3].copy()
+
+            boxes[:, 0] = np.maximum(0, widths[i]- np.int32(oldx2)) #- 1.0
+            boxes[:, 2] = np.minimum(widths[i]-1, widths[i] - np.int32(oldx1)) #- 1.0
+            boxes[:, 1] = np.maximum(0, boxes[:,1]) #- 1.0
+            boxes[:, 3] = np.minimum(heights[i]-1, boxes[:,3]) #- 1.0
+            #boxes[:, 0] = widths[i]- np.int32(oldx2) #- 1.0
+            #boxes[:, 2] = widths[i] - np.int32(oldx1) #- 1.0
 
             try:
-                assert (boxes[:, 2] >= boxes[:, 0]).all()
+                assert (boxes[:, 2] > boxes[:, 0]).all()
+                assert (boxes[:, 0] >= 0).all()
+                assert (boxes[:, 2] < widths[i]).all()
+
+                assert (boxes[:, 3] > boxes[:, 1]).all()
+                assert (boxes[:, 1] >= 0).all()
+                assert (boxes[:, 3] < heights[i]).all()
             except:
                 print('error')
                 print(boxes[:, 2] >= boxes[:, 0])
                 print(boxes)
                 print(widths[i])
+                print(heights[i])
             if 'seg_map' in self.roidb[i].keys():
                 seg_map = self.roidb[i]['seg_map'][::-1, :]
                 entry = {'boxes': boxes,
