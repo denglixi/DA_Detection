@@ -10,6 +10,9 @@ DATASET_T=foodArtsmt10
 DATASET=foodexclYIHmt10
 DATASET_T=foodYIHmt10
 
+DATASET=foodexclSciencemt10
+DATASET_T=foodSciencemt10
+
 #trainval_net_no_cross
 #trainval_net_global_local
 
