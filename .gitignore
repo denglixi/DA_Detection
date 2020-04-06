@@ -16,6 +16,7 @@ res*/
 weakly*/
 CheckPoints/
 *.nfs*
+script/
 
 # READ THIS BEFORE YOU REFACTOR ME
 #

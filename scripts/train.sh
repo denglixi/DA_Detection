@@ -1,17 +1,17 @@
 #!/bin/sh
 NW=0
 #{ foodexclArtsmt10 }
-DATASET=foodexclArtsmt10
+DATASET=foodexclArtsmt10Fake
 DATASET_T=foodArtsmt10
 
 #DATASET=foodexclUTownmt10
 #DATASET_T=foodUTownmt10
 
-DATASET=foodexclYIHmt10
-DATASET_T=foodYIHmt10
-
-DATASET=foodexclSciencemt10
-DATASET_T=foodSciencemt10
+#DATASET=foodexclYIHmt10
+#DATASET_T=foodYIHmt10
+#
+#DATASET=foodexclSciencemt10
+#DATASET_T=foodSciencemt10
 
 #trainval_net_no_cross
 #trainval_net_global_local
