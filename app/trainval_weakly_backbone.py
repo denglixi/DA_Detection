@@ -29,7 +29,7 @@ from model.utils.net_utils import weights_normal_init, save_net, load_net, \
 from model.utils.parser_func import parse_args, set_dataset_args
 from model.faster_rcnn.faster_rcnn_weakly_backbone import FasterRCNN_Weakly
 from model.faster_rcnn.faster_rcnn_weakly_multiscale_backbone import FasterRCNN_MultiWeakly
-
+from model.faster_rcnn.faster_rcnn_teacher_student import FasterRCNN_Teacher_Student
 # def set_imdb_args(args):
 #    args.imdb_name = args.dataset + '_trainmt10'
 #    args.imdb_name_target = args.dataset_t + '_train'
@@ -147,7 +147,7 @@ if __name__ == '__main__':
 
     # initilize the network here.
 
-    fasterRCNN = FasterRCNN_MultiWeakly(imdb.classes,
+    fasterRCNN = FasterRCNN_Teacher_Student(imdb.classes,
                                    class_agnostic=args.class_agnostic,
                                    lc=args.lc, gc=args.gc,
                                    backbone_type='res101',
