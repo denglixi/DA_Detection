@@ -32,11 +32,9 @@ def im_list_to_blob(ims):
 
     return blob
 
-def prep_im_for_blob(im, pixel_means, target_size, max_size):
+def rescale_blob(im, pixel_means, target_size, max_size):
     """Mean subtract and scale an image for use in a blob."""
 
-    im = im.astype(np.float32, copy=False)
-    im -= pixel_means
     # im = im[:, :, ::-1]
     im_shape = im.shape
     im_size_min = np.min(im_shape[0:2])
@@ -50,3 +48,8 @@ def prep_im_for_blob(im, pixel_means, target_size, max_size):
                     interpolation=cv2.INTER_LINEAR)
 
     return im, im_scale
+def sub_mean_pixel(im, pixel_means):
+    '''type of data is changed to float32    '''
+    im = im.astype(np.float32, copy=False)
+    im -= pixel_means
+    return im

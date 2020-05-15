@@ -286,7 +286,7 @@ if __name__ == '__main__':
                         num_boxes.resize_(data_t[3].size()).copy_(data_t[3])
                         #gt_boxes.data.resize_(1, 1, 5).zero_()
                         # num_boxes.data.resize_(1).zero_()
-                    out_d_pixel, out_d, img_bce_loss, region_bce_loss = fasterRCNN(
+                    out_d_pixel, out_d, img_bce_loss, region_bce_loss, weakly_consistency_loss = fasterRCNN(
                         im_data, im_info, gt_boxes, num_boxes, target=True)
 
                     if args.train_uda_loss:
@@ -312,6 +312,7 @@ if __name__ == '__main__':
                         loss += img_bce_loss * args.bce_alpha
                     if args.train_region_wda_loss:
                         loss += region_bce_loss * args.bce_alpha
+                    loss += weakly_consistency_loss
 
                 optimizer.zero_grad()
                 with autograd.detect_anomaly():
@@ -359,6 +360,8 @@ if __name__ == '__main__':
                         output_str += "bce: %.4f " % (region_bce_loss)
                     if args.train_img_wda_loss:
                         output_str += "img bce: %.4f " % (img_bce_loss)
+
+                    output_str += "weakly consistency loss: %.4f" % (weakly_consistency_loss)
                     print(output_str)
                     if args.use_tfboard:
                         info = {
