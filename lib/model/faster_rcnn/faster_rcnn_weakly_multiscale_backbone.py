@@ -205,7 +205,7 @@ class FasterRCNN_MultiWeakly(FasterRCNN):
                     BCE_loss = None
             else:
                 BCE_loss = None
-            return d_local, d_global, img_BCE_loss, BCE_loss
+            return max_roi_cls_prob, d_local, d_global, img_BCE_loss, BCE_loss
         RCNN_loss_cls = 0
         RCNN_loss_bbox = 0
 

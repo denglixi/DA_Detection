@@ -189,7 +189,8 @@ class FasterRCNN_Teacher_Student(FasterRCNN):
                     #max_roi_cls_prob = torch.max(cls_prob, 0)[0]
                     BCE_loss = F.binary_cross_entropy(
                         max_roi_cls_prob, cls_label)
-                    Weakly_Consistency_L2_loss = F.mse(cls_prob_student, cls_prob_teacher)
+                    Weakly_Consistency_L2_loss = F.mse_loss(cls_prob_student, cls_prob_teacher)
+
                 elif self.weakly_type == 'select_max':
                     #max_roi_cls_prob = torch.max(cls_prob, 0)[0]
                     selected_rois_index =  torch.argmax(cls_score, 0)
