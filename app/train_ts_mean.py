@@ -16,6 +16,7 @@ import pdb
 import time
 import _init_paths
 
+import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.nn as nn
 import torch
@@ -129,6 +130,7 @@ if __name__ == '__main__':
 
     # initilize the tensor holder here.
     im_data = torch.FloatTensor(1)
+    im_data_teacher = torch.FloatTensor(1)
     im_info = torch.FloatTensor(1)
     num_boxes = torch.LongTensor(1)
     gt_boxes = torch.FloatTensor(1)
@@ -136,12 +138,14 @@ if __name__ == '__main__':
     # ship to cuda
     if args.cuda:
         im_data = im_data.cuda()
+        im_data_teacher = im_data_teacher.cuda()
         im_info = im_info.cuda()
         num_boxes = num_boxes.cuda()
         gt_boxes = gt_boxes.cuda()
 
     # make variable
     im_data = Variable(im_data)
+    im_data_teacher = Variable(im_data_teacher)
     im_info = Variable(im_info)
     num_boxes = Variable(num_boxes)
     gt_boxes = Variable(gt_boxes)
@@ -161,6 +165,17 @@ if __name__ == '__main__':
                                    is_img_wda=args.train_img_wda_loss,
                                    is_region_wda=args.train_region_wda_loss)
     fasterRCNN.create_architecture()
+
+    fasterRCNN_teacher = FasterRCNN_Teacher_Student(imdb.classes,
+                                   class_agnostic=args.class_agnostic,
+                                   lc=args.lc, gc=args.gc,
+                                   backbone_type='res101',
+                                   pretrained=True,
+                                   weakly_type=args.weakly_type,
+                                   is_uda=args.train_uda_loss,
+                                   is_img_wda=args.train_img_wda_loss,
+                                   is_region_wda=args.train_region_wda_loss)
+    fasterRCNN_teacher.create_architecture()
 
     lr = cfg.TRAIN.LEARNING_RATE
     lr = args.lr
@@ -186,6 +201,7 @@ if __name__ == '__main__':
 
     if args.cuda:
         fasterRCNN.cuda()
+        fasterRCNN_teacher.cuda()
 
     if args.resume:
         print("loading checkpoint %s" % (args.load_name))
@@ -207,6 +223,7 @@ if __name__ == '__main__':
 
     if args.mGPUs:
         fasterRCNN = nn.DataParallel(fasterRCNN)
+        fasterRCNN_teacher = nn.DataParallel(fasterRCNN)
     iters_per_epoch = int(args.checkpoint_interval / args.batch_size)
     if args.ef:
         FL = EFocalLoss(class_num=2, gamma=args.gamma)
@@ -222,6 +239,7 @@ if __name__ == '__main__':
         for epoch in range(args.start_epoch, args.max_epochs + 1):
             # setting to train mode
             fasterRCNN.train()
+            fasterRCNN_teacher.train()
             loss_temp = 0
             start = time.time()
             if epoch % (args.lr_decay_step + 1) == 0:
@@ -279,15 +297,27 @@ if __name__ == '__main__':
 
                     with torch.no_grad():
                         # put target data into variable
-                        im_data.resize_(data_t[0].size()).copy_(data_t[0])
+                        data_t_teacher = data_t[0,:,:,:]
+                        data_t_student = data_t[1,:,:,:]
+                        im_data.resize_(data_t[0].size()).copy_(data_t_student)
+                        im_data_teacher.resize_(data_t[0].size()).copy_(data_t_teacher)
                         im_info.resize_(data_t[1].size()).copy_(data_t[1])
                         # gt is empty
                         gt_boxes.resize_(data_t[2].size()).copy_(data_t[2])
                         num_boxes.resize_(data_t[3].size()).copy_(data_t[3])
                         #gt_boxes.data.resize_(1, 1, 5).zero_()
                         # num_boxes.data.resize_(1).zero_()
-                    out_d_pixel, out_d, img_bce_loss, region_bce_loss = fasterRCNN(
+                    weakly_cls_prob, out_d_pixel, out_d, img_bce_loss, region_bce_loss = fasterRCNN(
                         im_data, im_info, gt_boxes, num_boxes, target=True)
+
+                    weakly_cls_prob_teacher, _, _, _, _= fasterRCNN_teacher(
+                        im_data_teacher, im_info, gt_boxes, num_boxes, target=True)
+
+
+                    ### Teacher-Student model: l2 loss
+                    if True:
+                        mse_loss = F.mse_loss(weakly_cls_prob, weakly_cls_prob_teacher)
+                        loss += mse_loss
 
                     if args.train_uda_loss:
                         # source domain label

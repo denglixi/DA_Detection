@@ -13,10 +13,12 @@ from __future__ import print_function
 import numpy as np
 import numpy.random as npr
 from scipy.misc import imread
+from torchvision import transforms
+from PIL import Image
 from model.utils.config import cfg
-from model.utils.blob import prep_im_for_blob, im_list_to_blob
+from model.utils.blob import rescale_blob, sub_mean_pixel, im_list_to_blob
 import pdb
-def get_minibatch(roidb, num_classes,seg_return=False):
+def get_minibatch(roidb, num_classes,seg_return=False, transform4ts=False):
   """Given a roidb, construct a minibatch sampled from it."""
   num_images = len(roidb)
   # Sample random scales to use for each image in this batch
@@ -27,19 +29,19 @@ def get_minibatch(roidb, num_classes,seg_return=False):
     format(num_images, cfg.TRAIN.BATCH_SIZE)
 
   # Get the input image blob, formatted for caffe
-  im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
+  im_blob, im_scales = _get_image_blob(roidb, random_scale_inds, transform4ts)
 
   blobs = {'data': im_blob}
 
-  assert len(im_scales) == 1, "Single batch only"
-  assert len(roidb) == 1, "Single batch only"
-  
+  #assert len(im_scales) == 1, "Single batch only"
+  #assert len(roidb) == 1, "Single batch only"
+
   # gt boxes: (x1, y1, x2, y2, cls)
   if cfg.TRAIN.USE_ALL_GT:
     # Include all ground truth boxes
     gt_inds = np.where(roidb[0]['gt_classes'] != 0)[0]
   else:
-    # For the COCO ground truth boxes, exclude the ones that are ''iscrowd'' 
+    # For the COCO ground truth boxes, exclude the ones that are ''iscrowd''
     gt_inds = np.where((roidb[0]['gt_classes'] != 0) & np.all(roidb[0]['gt_overlaps'].toarray() > -1.0, axis=1))[0]
   gt_boxes = np.empty((len(gt_inds), 5), dtype=np.float32)
   gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] * im_scales[0]
@@ -55,7 +57,7 @@ def get_minibatch(roidb, num_classes,seg_return=False):
 
   return blobs
 
-def _get_image_blob(roidb, scale_inds):
+def _get_image_blob(roidb, scale_inds, transform4ts=False):
   """Builds an input blob from the images in the roidb at the specified
   scales.
   """
@@ -77,10 +79,23 @@ def _get_image_blob(roidb, scale_inds):
     if roidb[i]['flipped']:
       im = im[:, ::-1, :]
     target_size = cfg.TRAIN.SCALES[scale_inds[i]]
-    im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,
+    im, im_scale = rescale_blob(im, cfg.PIXEL_MEANS, target_size,
                     cfg.TRAIN.MAX_SIZE)
-    im_scales.append(im_scale)
-    processed_ims.append(im)
+    if transform4ts:
+        transform_ts = transforms.Compose([transforms.RandomCrop(512)])
+        pil_img = Image.fromarray(im)
+        im_s = np.asarray(transform_ts(pil_img))
+        im_t = np.asarray(transform_ts(pil_img))
+        im_s = sub_mean_pixel(im_s, cfg.PIXEL_MEANS)
+        im_t = sub_mean_pixel(im_t, cfg.PIXEL_MEANS)
+        im_scales.append(im_scale)
+        processed_ims.append(im_t)
+        processed_ims.append(im_s)
+
+    else:
+        im = sub_mean_pixel(im, cfg.PIXEL_MEANS)
+        processed_ims.append(im)
+        im_scales.append(im_scale)
 
   # Create a blob to hold the input images
   blob = im_list_to_blob(processed_ims)

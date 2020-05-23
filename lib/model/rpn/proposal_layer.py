@@ -30,7 +30,7 @@ class _ProposalLayer(nn.Module):
     transformations to a set of regular boxes (called "anchors").
     """
 
-    def __init__(self, feat_stride, scales, ratios):
+    def __init__(self, feat_stride, scales, ratios ):
         super(_ProposalLayer, self).__init__()
 
         self._feat_stride = feat_stride

@@ -1,7 +1,7 @@
 #!/bin/sh
 NW=0
 #{ foodexclArtsmt10 }
-DATASET=foodexclArtsmt10Fake
+DATASET=foodexclArtsmt10
 DATASET_T=foodArtsmt10
 
 #DATASET=foodexclUTownmt10
@@ -30,7 +30,7 @@ BCE=3
 
 # !! train_domain_loss is necessary for training the domain align
 
-CUDA_VISIBLE_DEVICES=$1 python ./app/trainval_weakly_backbone.py --cuda --net res101 \
+CUDA_VISIBLE_DEVICES=$1 python ./app/train_teacher_student.py --cuda --net res101 \
    --dataset $DATASET --dataset_t $DATASET_T \
    --save_dir $2 \
    --nw $NW \
@@ -38,7 +38,7 @@ CUDA_VISIBLE_DEVICES=$1 python ./app/trainval_weakly_backbone.py --cuda --net re
    --lr_decay_step=$DECAY_SETP \
    --weakly_type max \
    --checkpoint_interval 10000 \
-   #--train_region_wda_loss \
+   --train_region_wda_loss \
    #--r $RESUME --load_name $LOAD_NAME \
    #--fine_tune_on_target
    #--train_img_wda_loss \

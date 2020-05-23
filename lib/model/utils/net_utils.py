@@ -45,6 +45,25 @@ class sampler(Sampler):
     def __len__(self):
         return self.num_data
 
+class sampler_given_random_order(sampler):
+    def __init__(self, train_size, batch_size, rand_num):
+        super(sampler_given_random_order, self).__init__(train_size, batch_size)
+        self.rand_num = rand_num
+
+    def __iter__(self):
+        self.rand_num = self.rand_num.expand(
+            self.num_per_batch, self.batch_size) + self.range
+
+        self.rand_num_view = self.rand_num.view(-1)
+
+        if self.leftover_flag:
+            self.rand_num_view = torch.cat(
+                (self.rand_num_view, self.leftover), 0)
+
+        return iter(self.rand_num_view)
+
+
+
 
 class EFocalLoss(nn.Module):
     r"""
